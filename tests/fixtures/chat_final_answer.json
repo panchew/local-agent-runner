@@ -1,0 +1,16 @@
+{
+  "model": "qwen2.5-coder:14b",
+  "created_at": "2026-07-09T14:15:22.914Z",
+  "message": {
+    "role": "assistant",
+    "content": "The edit is complete and the test passes."
+  },
+  "done_reason": "stop",
+  "done": true,
+  "total_duration": 1904310542,
+  "load_duration": 10065221,
+  "prompt_eval_count": 402,
+  "prompt_eval_duration": 381033000,
+  "eval_count": 12,
+  "eval_duration": 1470112000
+}
