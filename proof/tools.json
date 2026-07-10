@@ -1,0 +1,6 @@
+{
+  "enabled": ["read_file", "edit_file", "run_command"],
+  "allow_paths": ["/work/workspace/**"],
+  "allow_commands": ["python3 test_app.py"],
+  "timeout": 60
+}
