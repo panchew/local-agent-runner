@@ -3,8 +3,8 @@ project: local-agent-runner
 phase: P1
 milestone: M1
 type: milestone
-status: planned
-last_updated: 2026-07-09
+status: completed
+last_updated: 2026-07-10
 ---
 
 # Milestone M1 — First-Proof Milestone
@@ -189,8 +189,8 @@ Additionally:
 
 **Target Start:** TBD
 **Target Completion:** TBD
-**Actual Start:** Not started
-**Actual Completion:** In progress
+**Actual Start:** 2026-07-09
+**Actual Completion:** 2026-07-10 (see [Closure Declaration](P1-M1__closure-declaration.md))
 
 ---
 
