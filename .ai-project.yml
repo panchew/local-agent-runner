@@ -1,0 +1,12 @@
+# .ai-project.yml
+# AI Project System — Project Configuration Contract
+# Spec: .governance/governance/ai-project-yml-spec.md
+
+governance:
+  source: https://github.com/panchew/ai-project-system
+  version: "5.1.0"
+  ref: v5.1.0
+
+project:
+  name: local-agent-runner
+  description: "Standalone tool-calling loop engine for local (ollama) models; consumed by ai-project-system via a thin bin/run-dev-agent adapter. Governance-agnostic as software; its development is governed."
