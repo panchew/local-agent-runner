@@ -16,6 +16,9 @@ dev = [
     "pytest>=7",
 ]
 
+[project.scripts]
+local-agent-runner = "local_agent_runner.cli:main"
+
 [tool.setuptools]
 packages = ["local_agent_runner"]
 
