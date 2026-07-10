@@ -47,6 +47,15 @@ tests/
 CONTRACT.md
 ```
 
+## Running the tests
+
+The suite is fully offline — no Ollama server, no Docker, no GPU:
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
 ## First milestone — build this first (CONTRACT §9)
 
 > Give `qwen2.5-coder:14b` a 3-step task — **read** a file, **edit** one line, **run** a test that
