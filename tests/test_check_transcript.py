@@ -89,13 +89,13 @@ def edit_step():
     )
 
 
-def test_step(result=TEST_PASS_RESULT):
+def run_step(result=TEST_PASS_RESULT):
     return step("run_command", result, {"command": "python3 test_app.py"})
 
 
 def clean_transcript(steps=None):
     steps = (
-        steps if steps is not None else [read_step(), edit_step(), test_step()]
+        steps if steps is not None else [read_step(), edit_step(), run_step()]
     )
     return {
         "status": "completed",
@@ -129,10 +129,10 @@ class TestCleanTranscript:
     def test_extra_reads_and_rechecks_are_clean(self):
         steps = [
             read_step(),
-            test_step(TEST_FAIL_RESULT),  # ran the test early; it fails: fine
+            run_step(TEST_FAIL_RESULT),  # ran the test early; it fails: fine
             edit_step(),
             read_step(),  # re-read to double-check: fine
-            test_step(),
+            run_step(),
         ]
         assert problems(clean_transcript(steps)) == []
 
@@ -143,7 +143,7 @@ class TestCleanTranscript:
             read_step(),
             edit_step(),
             step("run_command", ERR_COMMAND_DENIED, {"command": "pytest"}),
-            test_step(),
+            run_step(),
         ]
         assert problems(clean_transcript(steps)) == []
 
@@ -220,37 +220,37 @@ class TestResultShape:
 
 class TestStepShape:
     def test_step_not_an_object_fails(self):
-        data = clean_transcript([read_step(), edit_step(), test_step(), 42])
+        data = clean_transcript([read_step(), edit_step(), run_step(), 42])
         assert any("step 4: expected an object" in p for p in problems(data))
 
     def test_empty_tool_name_fails(self):
         bad = read_step()
         bad["tool_call"]["name"] = ""
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("tool_call.name" in p for p in problems(data))
 
     def test_args_not_object_fails(self):
         bad = read_step()
         bad["tool_call"]["args"] = "app.py"
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("tool_call.args" in p for p in problems(data))
 
     def test_empty_tool_result_fails(self):
         bad = read_step()
         bad["tool_result"] = ""
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("tool_result" in p for p in problems(data))
 
     def test_missing_step_key_fails(self):
         bad = read_step()
         del bad["ms"]
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("step 1: missing key(s): ms" in p for p in problems(data))
 
     def test_unexpected_step_key_fails(self):
         bad = read_step()
         bad["note"] = "hi"
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any(
             "step 1: unexpected key(s): note" in p for p in problems(data)
         )
@@ -258,26 +258,26 @@ class TestStepShape:
     def test_negative_ms_fails(self):
         bad = read_step()
         bad["ms"] = -1
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("ms must be" in p for p in problems(data))
 
     def test_boolean_ms_fails(self):
         bad = read_step()
         bad["ms"] = True
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("ms must be" in p for p in problems(data))
 
     def test_null_eval_count_fails(self):
         # Acceptance demands real per-step §3 cost data on a live run.
         bad = read_step()
         bad["eval_count"] = None
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("eval_count must be" in p for p in problems(data))
 
     def test_zero_eval_count_fails(self):
         bad = read_step()
         bad["eval_count"] = 0
-        data = clean_transcript([bad, edit_step(), test_step()])
+        data = clean_transcript([bad, edit_step(), run_step()])
         assert any("eval_count must be" in p for p in problems(data))
 
 
@@ -319,7 +319,7 @@ class TestFinalIterationAndGenuineness:
         steps = [
             read_step(),
             edit_step(),
-            test_step(),
+            run_step(),
             step("run_command", ERR_COMMAND_DENIED, {"command": "pytest"}),
         ]
         data = clean_transcript(steps)
@@ -328,17 +328,17 @@ class TestFinalIterationAndGenuineness:
     def test_failing_test_in_final_iteration_fails_genuineness(self):
         # exit_code: 1 last is not an "error result", but there is then no
         # passing test after the edit — the genuineness rule catches it.
-        steps = [read_step(), edit_step(), test_step(TEST_FAIL_RESULT)]
+        steps = [read_step(), edit_step(), run_step(TEST_FAIL_RESULT)]
         data = clean_transcript(steps)
         found = problems(data)
         assert any("exit_code: 0" in p for p in found)
 
     def test_missing_read_fails(self):
-        data = clean_transcript([edit_step(), test_step()])
+        data = clean_transcript([edit_step(), run_step()])
         assert any("read_file" in p for p in problems(data))
 
     def test_missing_edit_fails(self):
-        data = clean_transcript([read_step(), test_step()])
+        data = clean_transcript([read_step(), run_step()])
         assert any(
             "no successful edit_file step" in p for p in problems(data)
         )
@@ -347,17 +347,17 @@ class TestFinalIterationAndGenuineness:
         failed_edit = step(
             "edit_file", ERR_OLD_NOT_FOUND, {"path": "app.py"}
         )
-        data = clean_transcript([read_step(), failed_edit, test_step()])
+        data = clean_transcript([read_step(), failed_edit, run_step()])
         assert any(
             "no successful edit_file step" in p for p in problems(data)
         )
 
     def test_read_only_after_edit_fails(self):
-        data = clean_transcript([edit_step(), read_step(), test_step()])
+        data = clean_transcript([edit_step(), read_step(), run_step()])
         assert any("precedes every" in p for p in problems(data))
 
     def test_passing_test_only_before_edit_fails(self):
-        data = clean_transcript([read_step(), test_step(), edit_step()])
+        data = clean_transcript([read_step(), run_step(), edit_step()])
         assert any(
             "after the successful edit" in p for p in problems(data)
         )

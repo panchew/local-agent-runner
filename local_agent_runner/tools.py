@@ -1,7 +1,8 @@
 """Proof tools and permission scoping (CONTRACT.md §4, §5, §6, §9).
 
 Delivers the three §9 proof tools — ``read_file``, ``edit_file``,
-``run_command`` — behind a single never-raising execution surface:
+``run_command`` — plus ``write_file`` and ``list_dir`` (E2.1), behind a
+single never-raising execution surface:
 
     execute_tool(name, arguments, permissions) -> ToolResult(ok, output)
 
@@ -60,6 +61,19 @@ _MSG_NOT_A_FILE = (
     "{tool}: path '{path}' is not a regular file. "
     "Provide the path of a text file."
 )
+_MSG_IS_A_DIRECTORY = (
+    "write_file: path '{path}' is a directory. "
+    "Provide the path of a file to create or overwrite."
+)
+_MSG_DIR_MISSING = (
+    "list_dir: directory '{path}' does not exist. "
+    "Provide the path of an existing directory."
+)
+_MSG_NOT_A_DIRECTORY = (
+    "list_dir: path '{path}' is not a directory. "
+    "Provide the path of a directory."
+)
+_MSG_DIR_EMPTY = "list_dir: '{path}' is empty."
 _MSG_BAD_RANGE = (
     "read_file: invalid line range start_line={start}, end_line={end} for "
     "'{path}' ({lines} lines). Lines are 1-based and inclusive; start_line "
@@ -184,6 +198,32 @@ _DEFINITIONS: Dict[str, Dict[str, Any]] = {
             },
         },
     },
+    "write_file": {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": (
+                "Create a new file or overwrite an existing one. Pass "
+                "'path' as the file's path and 'content' as the full text "
+                "to write. Missing parent directories are created "
+                "automatically."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path of the file to create or overwrite.",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Full text content to write to the file.",
+                    },
+                },
+                "required": ["path", "content"],
+            },
+        },
+    },
     "edit_file": {
         "type": "function",
         "function": {
@@ -215,6 +255,27 @@ _DEFINITIONS: Dict[str, Dict[str, Any]] = {
             },
         },
     },
+    "list_dir": {
+        "type": "function",
+        "function": {
+            "name": "list_dir",
+            "description": (
+                "List the immediate entries of a directory. Pass 'path' as "
+                "the directory's path. Subdirectory entries are suffixed "
+                "with '/'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path of the directory to list.",
+                    },
+                },
+                "required": ["path"],
+            },
+        },
+    },
     "run_command": {
         "type": "function",
         "function": {
@@ -238,8 +299,8 @@ _DEFINITIONS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-# Canonical exposure order for tool_definitions().
-_TOOL_ORDER = ["read_file", "edit_file", "run_command"]
+# Canonical exposure order for tool_definitions() (CONTRACT.md §4 table order).
+_TOOL_ORDER = ["read_file", "write_file", "edit_file", "list_dir", "run_command"]
 
 
 def tool_definitions(permissions: ToolPermissions) -> List[Dict[str, Any]]:
@@ -373,6 +434,64 @@ def _edit_file(
     )
 
 
+def _write_file(
+    arguments: Dict[str, Any], permissions: ToolPermissions
+) -> ToolResult:
+    path_arg, check = _require_string("write_file", arguments, "path")
+    if not check.ok:
+        return check
+    content, check = _require_string("write_file", arguments, "content")
+    if not check.ok:
+        return check
+
+    resolved = Path(path_arg).resolve()
+    if not permissions.path_permitted(resolved):
+        return _error(
+            _MSG_PATH_DENIED,
+            tool="write_file",
+            path=resolved,
+            globs=_globs_text(permissions),
+        )
+    if resolved.exists() and resolved.is_dir():
+        return _error(_MSG_IS_A_DIRECTORY, path=resolved)
+
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    resolved.write_text(content)
+    return ToolResult(
+        ok=True,
+        output=f"write_file: wrote {len(content)} characters to '{resolved}'.",
+    )
+
+
+def _list_dir(
+    arguments: Dict[str, Any], permissions: ToolPermissions
+) -> ToolResult:
+    path_arg, check = _require_string("list_dir", arguments, "path")
+    if not check.ok:
+        return check
+
+    resolved = Path(path_arg).resolve()
+    if not permissions.path_permitted(resolved):
+        return _error(
+            _MSG_PATH_DENIED,
+            tool="list_dir",
+            path=resolved,
+            globs=_globs_text(permissions),
+        )
+    if not resolved.exists():
+        return _error(_MSG_DIR_MISSING, path=resolved)
+    if not resolved.is_dir():
+        return _error(_MSG_NOT_A_DIRECTORY, path=resolved)
+
+    entries = sorted(resolved.iterdir(), key=lambda p: p.name)
+    if not entries:
+        return ToolResult(ok=True, output=_MSG_DIR_EMPTY.format(path=resolved))
+    listing = "\n".join(
+        f"{entry.name}/" if entry.is_dir() else entry.name for entry in entries
+    )
+    return ToolResult(ok=True, output=_cap_stream(listing))
+
+
 def _cap_stream(text: str) -> str:
     if len(text) <= OUTPUT_CAP:
         return text
@@ -417,7 +536,9 @@ def _run_command(
 
 _HANDLERS = {
     "read_file": _read_file,
+    "write_file": _write_file,
     "edit_file": _edit_file,
+    "list_dir": _list_dir,
     "run_command": _run_command,
 }
 
