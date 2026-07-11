@@ -1,28 +1,33 @@
 """Proof tools and permission scoping (CONTRACT.md §4, §5, §6, §9).
 
 Delivers the three §9 proof tools — ``read_file``, ``edit_file``,
-``run_command`` — plus ``write_file`` and ``list_dir`` (E2.1), behind a
-single never-raising execution surface:
+``run_command`` — plus ``write_file`` and ``list_dir`` (E2.1) and ``git``
+(E2.2), behind a single never-raising execution surface:
 
     execute_tool(name, arguments, permissions) -> ToolResult(ok, output)
 
 ``output`` is exactly the text E1.4 feeds back to the model as the tool
 result. Every expected failure (denied path, missing file, ambiguous edit,
-denied command, timeout) and every unexpected handler exception becomes a
-deterministic, model-facing error result — the §5 repair loop's input.
-Denial messages are built from module-level templates so the same denial
-always yields the same bytes (§4 determinism by construction).
+denied command, denied subcommand, timeout) and every unexpected handler
+exception becomes a deterministic, model-facing error result — the §5
+repair loop's input. Denial messages are built from module-level templates
+so the same denial always yields the same bytes (§4 determinism by
+construction).
 
 Permissions follow the §4 ``tools.json`` shape via
-:meth:`ToolPermissions.from_dict` (file I/O stays in E1.4). Both knobs deny
-by default: no ``allow_paths`` → all paths denied; no ``allow_commands`` →
-all commands denied; ``deny_commands`` wins over ``allow_commands``. Paths
-are matched as **resolved absolute paths** (symlinks and ``..`` resolved
-first), so traversal cannot escape the allowed globs.
+:meth:`ToolPermissions.from_dict` (file I/O stays in E1.4). All list-valued
+knobs deny by default: no ``allow_paths`` → all paths denied; no
+``allow_commands`` → all commands denied; no ``allow_subcommands`` → all
+git subcommands denied; ``deny_commands`` wins over ``allow_commands``.
+Paths are matched as **resolved absolute paths** (symlinks and ``..``
+resolved first), so traversal cannot escape the allowed globs.
 
 ``run_command`` uses ``subprocess.run`` with ``shell=True`` and an enforced
 timeout (spec-settled); a non-zero exit code is a *successful* tool result —
-a failing test is information for the model, not a tool failure. Stdout and
+a failing test is information for the model, not a tool failure. ``git``
+uses the same timeout knob but always runs with ``shell=False`` (a literal
+argv list, no shell-injection surface), gated by ``allow_subcommands``
+matched exactly against the first parsed token of ``args``. Stdout and
 stderr are each capped at :data:`OUTPUT_CAP` characters (§6 token
 discipline).
 """
@@ -30,6 +35,7 @@ discipline).
 from __future__ import annotations
 
 import copy
+import shlex
 import subprocess
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
@@ -98,6 +104,23 @@ _MSG_COMMAND_TIMEOUT = (
     "run_command: command '{command}' timed out after {timeout} seconds and "
     "was killed. Use a command that finishes within the timeout."
 )
+_NO_SUBCOMMANDS = "(none - no subcommands are permitted)"
+_MSG_GIT_SUBCOMMAND_DENIED = (
+    "git: subcommand '{subcommand}' is denied. "
+    "Only these allow_subcommands are permitted: {subcommands}"
+)
+_MSG_GIT_NO_SUBCOMMAND = (
+    "git: no subcommand provided in 'args'. "
+    "Pass the subcommand first, e.g. 'status --short'."
+)
+_MSG_GIT_PARSE_ERROR = (
+    "git: could not parse 'args' ({detail}). "
+    "Check for unbalanced quotes."
+)
+_MSG_GIT_TIMEOUT = (
+    "git: command 'git {args}' timed out after {timeout} seconds and "
+    "was killed. Use a command that finishes within the timeout."
+)
 _MSG_UNKNOWN_TOOL = (
     "unknown tool '{name}'. Available tools: {available}."
 )
@@ -134,6 +157,7 @@ class ToolPermissions:
     allow_paths: List[str] = field(default_factory=list)
     allow_commands: List[str] = field(default_factory=list)
     deny_commands: List[str] = field(default_factory=list)
+    allow_subcommands: List[str] = field(default_factory=list)
     timeout: Union[int, float] = DEFAULT_COMMAND_TIMEOUT
 
     @classmethod
@@ -145,6 +169,7 @@ class ToolPermissions:
             allow_paths=list(data.get("allow_paths") or []),
             allow_commands=list(data.get("allow_commands") or []),
             deny_commands=list(data.get("deny_commands") or []),
+            allow_subcommands=list(data.get("allow_subcommands") or []),
             timeout=data.get("timeout", DEFAULT_COMMAND_TIMEOUT),
         )
 
@@ -160,6 +185,13 @@ class ToolPermissions:
         if any(fnmatchcase(command, pat) for pat in self.deny_commands):
             return False
         return any(fnmatchcase(command, pat) for pat in self.allow_commands)
+
+    def subcommand_permitted(self, name: str) -> bool:
+        """True iff ``name`` exactly matches an entry in
+        ``allow_subcommands`` (deny by default). Exact membership, not
+        ``fnmatch`` — git subcommands are discrete tokens, not glob
+        patterns."""
+        return name in self.allow_subcommands
 
 
 # ---------------------------------------------------------------------------
@@ -297,10 +329,43 @@ _DEFINITIONS: Dict[str, Dict[str, Any]] = {
             },
         },
     },
+    "git": {
+        "type": "function",
+        "function": {
+            "name": "git",
+            "description": (
+                "Run a git subcommand and return its exit code, stdout, and "
+                "stderr. Pass the arguments as 'args', with the subcommand "
+                "first (not including the leading 'git' itself), e.g. "
+                "'status --short', 'add app.py', 'commit -m \"fix bug\"'. "
+                "The subcommand must be one you have been permitted to use."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "args": {
+                        "type": "string",
+                        "description": (
+                            "The git arguments, subcommand first, e.g. "
+                            "'status --short'."
+                        ),
+                    },
+                },
+                "required": ["args"],
+            },
+        },
+    },
 }
 
 # Canonical exposure order for tool_definitions() (CONTRACT.md §4 table order).
-_TOOL_ORDER = ["read_file", "write_file", "edit_file", "list_dir", "run_command"]
+_TOOL_ORDER = [
+    "read_file",
+    "write_file",
+    "edit_file",
+    "list_dir",
+    "run_command",
+    "git",
+]
 
 
 def tool_definitions(permissions: ToolPermissions) -> List[Dict[str, Any]]:
@@ -331,6 +396,10 @@ def _globs_text(permissions: ToolPermissions) -> str:
 
 def _patterns_text(permissions: ToolPermissions) -> str:
     return ", ".join(permissions.allow_commands) or _NO_PATTERNS
+
+
+def _subcommands_text(permissions: ToolPermissions) -> str:
+    return ", ".join(sorted(permissions.allow_subcommands)) or _NO_SUBCOMMANDS
 
 
 def _require_string(
@@ -534,12 +603,55 @@ def _run_command(
     return ToolResult(ok=True, output=output)
 
 
+def _git(
+    arguments: Dict[str, Any], permissions: ToolPermissions
+) -> ToolResult:
+    args, check = _require_string("git", arguments, "args")
+    if not check.ok:
+        return check
+
+    try:
+        tokens = shlex.split(args)
+    except ValueError as exc:
+        return _error(_MSG_GIT_PARSE_ERROR, detail=exc)
+    if not tokens:
+        return _error(_MSG_GIT_NO_SUBCOMMAND)
+
+    subcommand = tokens[0]
+    if not permissions.subcommand_permitted(subcommand):
+        return _error(
+            _MSG_GIT_SUBCOMMAND_DENIED,
+            subcommand=subcommand,
+            subcommands=_subcommands_text(permissions),
+        )
+
+    try:
+        completed = subprocess.run(
+            ["git", *tokens],
+            shell=False,  # spec-settled — never a shell for git
+            capture_output=True,
+            text=True,
+            timeout=permissions.timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return _error(_MSG_GIT_TIMEOUT, args=args, timeout=permissions.timeout)
+    # Fixed result block, identical shape to run_command's; non-zero exit is
+    # information for the model, not a tool failure.
+    output = (
+        f"exit_code: {completed.returncode}\n"
+        f"stdout:\n{_cap_stream(completed.stdout)}\n"
+        f"stderr:\n{_cap_stream(completed.stderr)}"
+    )
+    return ToolResult(ok=True, output=output)
+
+
 _HANDLERS = {
     "read_file": _read_file,
     "write_file": _write_file,
     "edit_file": _edit_file,
     "list_dir": _list_dir,
     "run_command": _run_command,
+    "git": _git,
 }
 
 
