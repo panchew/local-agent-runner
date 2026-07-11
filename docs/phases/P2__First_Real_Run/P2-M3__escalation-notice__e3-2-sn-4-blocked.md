@@ -4,7 +4,7 @@ milestone: M3
 issued_by: Milestone Chat (P2-M3)
 issued_to: Phase Chat (P2)
 date: 2026-07-11
-status: open
+status: resolved
 ---
 
 # Escalation Notice: E3.2 blocked on the SN-4 cross-repo adapter Epic
@@ -59,4 +59,14 @@ stand on their own and required no further work.
 
 ## Resolution
 
-(empty — awaiting Phase Chat decision)
+**Phase Chat decision (2026-07-11), relaying HQ's:** Hold. Phase P2 stays open with E3.2
+unplanned until `bin/run-dev-agent` is ready on the ai-project-system side. No interim or
+narrower path is authorized — the Brief's success criterion is to be met via the real
+orchestrator-driven path only. Full record:
+`docs/phases/P2__First_Real_Run/P2__escalation-notice__m3-e3-2-sn-4-blocked.md`
+(Phase Chat → HQ Chat, resolved).
+
+**Directive to this Milestone Chat:** Do not plan or launch E3.2 until the Phase Chat
+notifies you that `bin/run-dev-agent` is ready. Milestone M3 remains open — E3.1 closed,
+E3.2 pending — take no further action on E3.2 in the meantime. This is a wait, not a scope
+change: the Milestone spec is unamended.
