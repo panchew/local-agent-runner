@@ -1,0 +1,6 @@
+{
+  "enabled": ["read_file", "write_file", "edit_file", "list_dir", "run_command"],
+  "allow_paths": ["/repo/**"],
+  "allow_commands": ["pytest*", "python*"],
+  "timeout": 120
+}
