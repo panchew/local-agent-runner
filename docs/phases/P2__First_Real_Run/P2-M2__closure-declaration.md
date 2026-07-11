@@ -3,20 +3,19 @@ project: local-agent-runner
 phase: P2
 milestone: M2
 type: closure-declaration
-status: stage-1-complete
-closure_date: 2026-07-10
+status: closed
+closure_date: 2026-07-11
 ---
 
 # MILESTONE CLOSURE DECLARATION — P2-M2
 
 **Milestone:** M2 — Real-Epic Toolset
 **Phase:** P2 — First Real Run
-**Status:** Stage 1 complete (below); Stage 2 (consolidation to `phase/P2`) awaits Phase
-Chat acceptance
-**Completion Date:** 2026-07-10
-**Declared By:** Milestone Chat P2-M2 (Stage 1); Phase Chat P2 acceptance pending for
-Stage 2
-**Merge Commit:** N/A yet — `milestone/M2` has not been consolidated into `phase/P2`
+**Status:** Closed — Stage 1 and Stage 2 both complete
+**Completion Date:** 2026-07-11
+**Declared By:** Milestone Chat P2-M2 (Stage 1, 2026-07-10); Phase Chat P2 (Stage 2
+acceptance, 2026-07-11)
+**Merge Commit:** `0e1b802` — `milestone/M2` consolidated into `phase/P2`
 
 > This document is the authoritative record of P2-M2's Stage 1 completion. The
 > acceptance decisions and review verdicts summarized here were issued in the Milestone
@@ -111,20 +110,38 @@ Creation-Chat-level process fix rather than a repeated per-milestone note.
 
 ---
 
-## Stage 2: Closure Confirmation (consolidation) — NOT YET PERFORMED
+## Stage 2: Closure Confirmation (consolidation) — COMPLETE
 
 Stage 2 (`milestone/M2` → `phase/P2` consolidation) is a Phase-level acceptance
 decision, not the Milestone Chat's to self-authorize (per this Milestone's own
 governance references: "milestone-level acceptance belongs to the parent chat").
 
-**Awaiting from Phase Chat P2:**
-- [ ] Milestone-level acceptance of P2-M2 as a whole
-- [ ] Authorization to merge `milestone/M2` → `phase/P2`
+**Performed by Phase Chat P2 (2026-07-11):**
+- [x] Milestone-level acceptance of P2-M2 as a whole — independently verified before
+      merge: full suite re-run on `milestone/M2` (202 passed, 1 skipped, no pytest
+      deprecation warning — matched the Stage 1 claims, not just trusted), and
+      `git diff phase/P2...milestone/M2 --stat` confirmed scope was limited to
+      `tools.py`/`loop.py`, tests, and the M2 governance artifacts — no scope creep
+- [x] Authorization to merge `milestone/M2` → `phase/P2` — merged `--no-ff`, merge
+      commit `0e1b802`; full suite re-run again post-merge on `phase/P2` (202 passed,
+      1 skipped) to confirm the merge itself introduced no regression
+
+**Milestone Delivery Authorization**
+
+```
+MILESTONE DELIVERY AUTHORIZATION
+
+Issuer: Phase Chat (P2 — First Real Run)
+Date: 2026-07-11
+Milestone Reference: P2-M2 — Real-Epic Toolset
+Authorized Action: Milestone accepted and consolidated
+Merge Instruction: milestone/M2 merged --no-ff to phase/P2 at 0e1b802
+```
 
 ## Next Steps
 
-- Once Phase Chat P2 accepts, consolidate `milestone/M2` → `phase/P2` and re-run the
-  full suite post-merge before declaring Stage 2 closed
-- Any future `milestone/M3` MUST branch from `phase/P2` (post-consolidation commit)
+- Any future `milestone/M3` MUST branch from `phase/P2` at or after `0e1b802`
 - `epic/E2.1`–`epic/E2.3` and `milestone/M2` branches retained as history; archive or
   delete per project policy
+- Phase Chat P2 proceeds to plan M3 — Adapter Readiness & First Real Run, per the Phase
+  spec's sequencing rule (M2 accepted before M3 planning begins)

@@ -3,8 +3,8 @@ project: local-agent-runner
 phase: P2
 milestone: M2
 type: milestone
-status: active
-last_updated: 2026-07-10
+status: completed
+last_updated: 2026-07-11
 ---
 
 # Milestone M2 — Real-Epic Toolset
@@ -165,7 +165,7 @@ Additionally:
 **Target Start:** TBD
 **Target Completion:** TBD
 **Actual Start:** 2026-07-10
-**Actual Completion:** In progress
+**Actual Completion:** 2026-07-11 (see [Closure Declaration](P2-M2__closure-declaration.md))
 
 ---
 
