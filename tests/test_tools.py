@@ -90,17 +90,38 @@ class TestToolDefinitions:
         assert names == ["read_file", "run_command"]
 
     def test_unknown_enabled_names_ignored(self, tmp_path):
-        perms = perms_for(tmp_path, enabled=["write_file", "edit_file"])
+        perms = perms_for(tmp_path, enabled=["git", "edit_file"])
         names = [d["function"]["name"] for d in tool_definitions(perms)]
         assert names == ["edit_file"]
+
+    def test_new_tools_appear_in_canonical_order_when_enabled(self, tmp_path):
+        perms = perms_for(
+            tmp_path,
+            enabled=["read_file", "write_file", "edit_file", "list_dir", "run_command"],
+        )
+        names = [d["function"]["name"] for d in tool_definitions(perms)]
+        assert names == ["read_file", "write_file", "edit_file", "list_dir", "run_command"]
 
     def test_required_lists_and_flat_primitive_schemas(self, tmp_path):
         defs = {
             d["function"]["name"]: d["function"]["parameters"]
-            for d in tool_definitions(perms_for(tmp_path))
+            for d in tool_definitions(
+                perms_for(
+                    tmp_path,
+                    enabled=[
+                        "read_file",
+                        "write_file",
+                        "edit_file",
+                        "list_dir",
+                        "run_command",
+                    ],
+                )
+            )
         }
         assert defs["read_file"]["required"] == ["path"]
+        assert defs["write_file"]["required"] == ["path", "content"]
         assert defs["edit_file"]["required"] == ["path", "old", "new"]
+        assert defs["list_dir"]["required"] == ["path"]
         assert defs["run_command"]["required"] == ["command"]
         for schema in defs.values():
             assert schema["type"] == "object"
@@ -251,6 +272,175 @@ class TestEditFile:
 
 
 # ---------------------------------------------------------------------------
+# write_file
+# ---------------------------------------------------------------------------
+
+
+class TestWriteFile:
+    def test_creates_new_file(self, tmp_path):
+        f = tmp_path / "new.txt"
+        result = execute_tool(
+            "write_file", {"path": str(f), "content": "hello\n"}, perms_for(tmp_path)
+        )
+        assert result.ok
+        assert f.read_text() == "hello\n"
+        assert "wrote 6 characters" in result.output
+
+    def test_overwrites_existing_file(self, tmp_path):
+        f = tmp_path / "existing.txt"
+        f.write_text("old content\n")
+        result = execute_tool(
+            "write_file", {"path": str(f), "content": "new\n"}, perms_for(tmp_path)
+        )
+        assert result.ok
+        assert f.read_text() == "new\n"
+
+    def test_creates_missing_parent_directories(self, tmp_path):
+        f = tmp_path / "a" / "b" / "c.txt"
+        result = execute_tool(
+            "write_file", {"path": str(f), "content": "deep\n"}, perms_for(tmp_path)
+        )
+        assert result.ok
+        assert f.read_text() == "deep\n"
+
+    def test_denied_path_is_error(self, tmp_path):
+        perms = perms_for(tmp_path, allow_paths=[])
+        result = execute_tool(
+            "write_file",
+            {"path": str(tmp_path / "f.txt"), "content": "x"},
+            perms,
+        )
+        assert not result.ok
+        assert "denied" in result.output
+        assert not (tmp_path / "f.txt").exists()
+
+    def test_target_is_directory_is_error(self, tmp_path):
+        d = tmp_path / "adir"
+        d.mkdir()
+        result = execute_tool(
+            "write_file", {"path": str(d), "content": "x"}, perms_for(tmp_path)
+        )
+        assert not result.ok
+        assert "is a directory" in result.output
+
+    def test_non_string_content_is_error(self, tmp_path):
+        result = execute_tool(
+            "write_file",
+            {"path": str(tmp_path / "f.txt"), "content": 42},
+            perms_for(tmp_path),
+        )
+        assert not result.ok
+        assert "must be a string" in result.output
+        assert not (tmp_path / "f.txt").exists()
+
+
+# ---------------------------------------------------------------------------
+# list_dir
+# ---------------------------------------------------------------------------
+
+
+class TestListDir:
+    def test_lists_sorted_entries_with_dir_suffix(self, tmp_path):
+        root = tmp_path / "root"
+        root.mkdir()
+        (root / "b.txt").write_text("b")
+        (root / "a.txt").write_text("a")
+        (root / "zdir").mkdir()
+        result = execute_tool(
+            "list_dir", {"path": str(root)}, perms_for(tmp_path)
+        )
+        assert result.ok
+        assert result.output == "a.txt\nb.txt\nzdir/"
+
+    def test_empty_directory_returns_fixed_message(self, tmp_path):
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        result = execute_tool(
+            "list_dir", {"path": str(empty)}, perms_for(tmp_path)
+        )
+        assert result.ok
+        assert result.output == f"list_dir: '{empty}' is empty."
+
+    def test_denied_path_is_error(self, tmp_path):
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        perms = perms_for(tmp_path, allow_paths=[str(allowed / "**")])
+        result = execute_tool("list_dir", {"path": str(outside)}, perms)
+        assert not result.ok
+        assert "denied" in result.output
+
+    def test_missing_directory_is_error(self, tmp_path):
+        result = execute_tool(
+            "list_dir", {"path": str(tmp_path / "gone")}, perms_for(tmp_path)
+        )
+        assert not result.ok
+        assert "does not exist" in result.output
+
+    def test_path_is_a_file_not_a_directory(self, tmp_path):
+        f = tmp_path / "file.txt"
+        f.write_text("x")
+        result = execute_tool("list_dir", {"path": str(f)}, perms_for(tmp_path))
+        assert not result.ok
+        assert "not a directory" in result.output
+
+    def test_output_cap_enforced(self, tmp_path):
+        big = tmp_path / "many"
+        big.mkdir()
+        for i in range(2000):
+            (big / f"file_{i:05d}.txt").write_text("x")
+        result = execute_tool("list_dir", {"path": str(big)}, perms_for(tmp_path))
+        assert result.ok
+        assert "[truncated:" in result.output
+        assert len(result.output) < OUTPUT_CAP + 200
+
+
+# ---------------------------------------------------------------------------
+# allow_paths consistency across all four file tools
+# ---------------------------------------------------------------------------
+
+
+class TestFileToolsPathConsistency:
+    def test_out_of_allow_paths_denied_identically(self, tmp_path):
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        outside = tmp_path / "outside.txt"
+        outside.write_text("secret")
+        perms = perms_for(tmp_path, allow_paths=[str(allowed / "**")])
+
+        calls = {
+            "read_file": {"path": str(outside)},
+            "edit_file": {"path": str(outside), "old": "a", "new": "b"},
+            "write_file": {"path": str(outside), "content": "x"},
+            "list_dir": {"path": str(tmp_path)},
+        }
+        for name, arguments in calls.items():
+            result = execute_tool(name, arguments, perms)
+            assert not result.ok
+            assert "denied" in result.output
+
+    def test_traversal_path_denied_identically(self, tmp_path):
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        secret = tmp_path / "secret.txt"
+        secret.write_text("secret")
+        perms = perms_for(tmp_path, allow_paths=[str(allowed / "**")])
+        sneaky = str(allowed / ".." / "secret.txt")
+
+        calls = {
+            "read_file": {"path": sneaky},
+            "edit_file": {"path": sneaky, "old": "a", "new": "b"},
+            "write_file": {"path": sneaky, "content": "x"},
+            "list_dir": {"path": sneaky},
+        }
+        for name, arguments in calls.items():
+            result = execute_tool(name, arguments, perms)
+            assert not result.ok
+            assert "denied" in result.output
+
+
+# ---------------------------------------------------------------------------
 # run_command
 # ---------------------------------------------------------------------------
 
@@ -319,11 +509,14 @@ class TestRunCommand:
 
 class TestExecuteToolSurface:
     def test_unknown_tool_is_error_result(self, tmp_path):
-        result = execute_tool("write_file", {"path": "x"}, perms_for(tmp_path))
+        result = execute_tool("delete_file", {"path": "x"}, perms_for(tmp_path))
         assert isinstance(result, ToolResult)
         assert not result.ok
-        assert "unknown tool 'write_file'" in result.output
-        assert "read_file, edit_file, run_command" in result.output
+        assert "unknown tool 'delete_file'" in result.output
+        assert (
+            "read_file, write_file, edit_file, list_dir, run_command"
+            in result.output
+        )
 
     def test_unexpected_exception_becomes_error_result(self, tmp_path):
         f = tmp_path / "binary.bin"
@@ -358,13 +551,27 @@ class TestIntegrationSeam:
     def test_parsed_tool_call_request_executes_for_each_tool(self, tmp_path):
         """A ToolCallRequest from parse_tool_call, validated against
         tool_definitions(permissions), executes through execute_tool."""
-        f = tmp_path / "note.txt"
+        root = tmp_path / "root"
+        root.mkdir()
+        f = root / "note.txt"
         f.write_text("draft\n")
-        perms = perms_for(tmp_path)
+        perms = perms_for(
+            tmp_path,
+            enabled=["read_file", "write_file", "edit_file", "list_dir", "run_command"],
+        )
         tools = tool_definitions(perms)
+        assert [t["function"]["name"] for t in tools] == [
+            "read_file",
+            "write_file",
+            "edit_file",
+            "list_dir",
+            "run_command",
+        ]
         calls = [
             ("read_file", {"path": str(f)}),
+            ("write_file", {"path": str(f), "content": "draft\nmore\n"}),
             ("edit_file", {"path": str(f), "old": "draft", "new": "final"}),
+            ("list_dir", {"path": str(root)}),
             ("run_command", {"command": "echo done"}),
         ]
         for name, arguments in calls:
@@ -379,7 +586,7 @@ class TestIntegrationSeam:
             assert isinstance(parsed, ToolCallRequest)
             result = execute_tool(parsed.name, parsed.arguments, perms)
             assert result.ok, result.output
-        assert f.read_text() == "final\n"
+        assert f.read_text() == "final\nmore\n"
 
     def test_section_9_proof_scenario_on_temp_fixture(self, tmp_path):
         """The §9 proof seam: read a file → edit one line → run a test that
