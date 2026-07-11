@@ -3,7 +3,7 @@ project: local-agent-runner
 phase: P2
 milestone: M3
 type: milestone
-status: active
+status: on-hold
 last_updated: 2026-07-11
 ---
 
@@ -191,3 +191,10 @@ Additionally:
   launching Coding Agents.
 - **This is the Phase's exit milestone.** When E3.2 is accepted, Phase P2 meets its Exit
   Criteria per the Phase spec and should proceed to Phase Closure.
+- **On hold (2026-07-11):** E3.1 is closed; E3.2 is blocked on the SN-4 cross-repo
+  dependency (the `bin/run-dev-agent` adapter Epic does not yet exist on
+  ai-project-system's side — see
+  `P2-M3__escalation-notice__e3-2-sn-4-blocked.md`). HQ decision, relayed via
+  `P2__escalation-notice__m3-e3-2-sn-4-blocked.md`: hold until `bin/run-dev-agent` is
+  ready; no interim/narrower path authorized. Do not plan or launch E3.2 until the Phase
+  Chat lifts this hold. Not a scope change — nothing above this note is amended.
