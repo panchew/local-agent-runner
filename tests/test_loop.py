@@ -103,6 +103,19 @@ def final_answer_response(text="All done.", eval_count=12):
     )
 
 
+def junk_final_answer_response(text='{"name": null, "arguments": {}}', eval_count=15):
+    """A junk terminating turn (SN-3, E2.3): a leftover tool-call-shaped
+    blob with no native tool_calls — parse_tool_call correctly classifies
+    this as a FinalAnswer (name is not a string, so it isn't a valid call),
+    but the "answer" is unusable."""
+    return response_from(
+        {
+            "message": {"role": "assistant", "content": text},
+            "eval_count": eval_count,
+        }
+    )
+
+
 class FakeClient:
     """Returns the scripted items in order; an Exception item is raised.
     Records every chat() call for observability."""
@@ -183,11 +196,15 @@ class TestTermination:
         result = run("m", "task", permissions, max_iterations=4, client=client)
 
         assert result.status == STATUS_MAX_ITERATIONS_EXCEEDED
-        assert client.calls == 4  # exactly max_iterations turns
+        # EndlessToolCaller ignores tools=None, so the SN-3 corrective call
+        # (E2.3) it triggers on ceiling exhaustion also comes back
+        # tool-call-shaped (content "") — that's still the one-and-only
+        # nudge attempt: max_iterations turns + exactly one corrective call.
+        assert client.calls == 4 + 1
         assert len(result.transcript) == 4
         assert result.iterations == 4
-        assert result.final_answer is None
-        assert result.tokens == 20
+        assert result.final_answer == ""
+        assert result.tokens == 20 + 5
 
     def test_default_ceiling_is_ten(self, workspace):
         file, permissions = workspace
@@ -196,7 +213,7 @@ class TestTermination:
         result = run("m", "task", permissions, client=client)
 
         assert result.status == STATUS_MAX_ITERATIONS_EXCEEDED
-        assert client.calls == DEFAULT_MAX_ITERATIONS == 10
+        assert client.calls == DEFAULT_MAX_ITERATIONS + 1 == 11
 
     def test_client_error_mid_run_preserves_transcript(self, workspace):
         file, permissions = workspace
@@ -501,3 +518,197 @@ class TestResultShape:
         assert data["status"] == STATUS_ERROR
         assert data["final_answer"] is None
         assert result.error == "boom"
+
+
+# ---------------------------------------------------------------------------
+# SN-3 repair nudge (E2.3): junk terminating turn / ceiling exhaustion.
+# At most one extra, tools-disabled call, never a status change.
+# ---------------------------------------------------------------------------
+
+
+class TestRepairNudge:
+    def test_junk_terminating_turn_triggers_one_corrective_call(self, workspace):
+        _, permissions = workspace
+        fake = FakeClient(
+            [
+                junk_final_answer_response(eval_count=15),
+                final_answer_response("The real answer.", eval_count=8),
+            ]
+        )
+
+        result = run("m", "task", permissions, client=fake)
+
+        assert result.status == STATUS_COMPLETED
+        assert result.final_answer == "The real answer."
+        assert len(fake.calls) == 2  # exactly one corrective call
+        assert result.tokens == 15 + 8
+        assert result.transcript == []  # not a tool round
+        assert result.iterations == 0
+
+    @pytest.mark.parametrize("content", ["", "   "])
+    def test_empty_or_whitespace_final_answer_triggers_nudge(self, workspace, content):
+        _, permissions = workspace
+        fake = FakeClient(
+            [
+                final_answer_response(content, eval_count=5),
+                final_answer_response("The real answer.", eval_count=8),
+            ]
+        )
+
+        result = run("m", "task", permissions, client=fake)
+
+        assert result.status == STATUS_COMPLETED
+        assert result.final_answer == "The real answer."
+        assert len(fake.calls) == 2
+
+    def test_real_prose_final_answer_is_never_nudged(self, workspace):
+        _, permissions = workspace
+        text = "Sure thing, { just prose with a brace }."
+        fake = FakeClient([final_answer_response(text, eval_count=9)])
+
+        result = run("m", "task", permissions, client=fake)
+
+        assert result.status == STATUS_COMPLETED
+        assert result.final_answer == text
+        assert len(fake.calls) == 1  # no corrective call
+
+    def test_ceiling_exhaustion_triggers_one_corrective_call(self, workspace):
+        file, permissions = workspace
+        script = [
+            native_call_response("read_file", {"path": str(file)}, eval_count=5)
+            for _ in range(4)
+        ]
+        script.append(final_answer_response("Here is what I found.", eval_count=8))
+        fake = FakeClient(script)
+
+        result = run("m", "task", permissions, max_iterations=4, client=fake)
+
+        assert result.status == STATUS_MAX_ITERATIONS_EXCEEDED  # not promoted
+        assert result.final_answer == "Here is what I found."
+        assert len(fake.calls) == 4 + 1
+        assert result.iterations == 4
+        assert len(result.transcript) == 4
+        assert result.tokens == 4 * 5 + 8
+
+    def test_ceiling_exhaustion_never_exceeds_max_iterations_plus_one_calls(
+        self, workspace
+    ):
+        file, permissions = workspace
+        script = [
+            native_call_response("read_file", {"path": str(file)}, eval_count=5)
+            for _ in range(3)
+        ]
+        script.append(final_answer_response(eval_count=8))
+        fake = FakeClient(script)
+
+        run("m", "task", permissions, max_iterations=3, client=fake)
+
+        assert len(fake.calls) == 3 + 1  # never max_iterations + 2 or more
+
+    def test_corrective_call_failure_falls_back_junk_branch(self, workspace):
+        _, permissions = workspace
+        junk_text = '{"name": null, "arguments": {}}'
+        fake = FakeClient(
+            [
+                junk_final_answer_response(text=junk_text, eval_count=15),
+                OllamaConnectionError("cannot reach Ollama at http://localhost:11434"),
+            ]
+        )
+
+        result = run("m", "task", permissions, client=fake)
+
+        assert result.status == STATUS_COMPLETED  # no new error path
+        assert result.final_answer == junk_text  # original junk, unchanged
+        assert result.tokens == 15  # the failed corrective call adds nothing
+        assert result.transcript == []
+        assert result.iterations == 0
+
+    def test_corrective_call_failure_falls_back_ceiling_branch(self, workspace):
+        file, permissions = workspace
+        script = [
+            native_call_response("read_file", {"path": str(file)}, eval_count=5)
+            for _ in range(2)
+        ]
+        script.append(
+            OllamaConnectionError("cannot reach Ollama at http://localhost:11434")
+        )
+        fake = FakeClient(script)
+
+        result = run("m", "task", permissions, max_iterations=2, client=fake)
+
+        assert result.status == STATUS_MAX_ITERATIONS_EXCEEDED  # exactly pre-Epic
+        assert result.final_answer is None
+        assert result.iterations == 2
+        assert len(result.transcript) == 2
+        assert result.tokens == 2 * 5
+
+    def test_never_more_than_one_corrective_call_even_if_also_unusable(
+        self, workspace
+    ):
+        _, permissions = workspace
+        second_junk_text = '{"name": "still_junk"}'
+        fake = FakeClient(
+            [
+                junk_final_answer_response(eval_count=15),
+                junk_final_answer_response(text=second_junk_text, eval_count=9),
+            ]
+        )
+
+        result = run("m", "task", permissions, client=fake)
+
+        assert result.status == STATUS_COMPLETED
+        assert result.final_answer == second_junk_text  # raw, as-is, no 2nd nudge
+        assert len(fake.calls) == 2  # exactly one more than the pre-nudge scenario
+
+    def test_transcript_and_iterations_unaffected_by_nudge_junk_branch(
+        self, workspace
+    ):
+        _, permissions = workspace
+        fake = FakeClient(
+            [
+                junk_final_answer_response(eval_count=15),
+                final_answer_response("The real answer.", eval_count=8),
+            ]
+        )
+
+        result = run("m", "task", permissions, client=fake)
+
+        assert result.iterations == len(result.transcript) == 0
+
+    def test_transcript_and_iterations_unaffected_by_nudge_ceiling_branch(
+        self, workspace
+    ):
+        file, permissions = workspace
+        script = [
+            native_call_response("read_file", {"path": str(file)}, eval_count=5)
+            for _ in range(3)
+        ]
+        script.append(final_answer_response("Here.", eval_count=8))
+        fake = FakeClient(script)
+
+        result = run("m", "task", permissions, max_iterations=3, client=fake)
+
+        assert result.iterations == len(result.transcript) == 3
+
+    def test_corrective_call_is_tools_disabled_with_prior_turn_in_context(
+        self, workspace
+    ):
+        _, permissions = workspace
+        fake = FakeClient(
+            [
+                junk_final_answer_response(eval_count=15),
+                final_answer_response("The real answer.", eval_count=8),
+            ]
+        )
+
+        run("m", "task", permissions, client=fake)
+
+        corrective_call = fake.calls[1]
+        assert corrective_call["tools"] is None  # omitted from the wire payload
+        assert corrective_call["messages"][-1] == {
+            "role": "user",
+            "content": "Your previous response was not a usable answer. Please "
+            "reply now with a plain-text final answer to the task above — no "
+            "tool calls, no JSON.",
+        }
+        assert corrective_call["messages"][-2]["role"] == "assistant"  # prior turn
