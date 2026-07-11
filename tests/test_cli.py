@@ -201,8 +201,11 @@ class TestDidNotConverge:
 
         data = json.loads(workspace["transcript"].read_text())
         assert data["status"] == "max_iterations_exceeded"
-        # --max-iterations reached the loop, observable via the fake
-        assert client.calls == 3
+        # --max-iterations reached the loop, observable via the fake; plus
+        # the SN-3 corrective call (E2.3) ceiling exhaustion triggers —
+        # EndlessToolCaller ignores tools=None so it too comes back
+        # tool-call-shaped, but that's still the one-and-only nudge attempt.
+        assert client.calls == 3 + 1
         assert len(data["transcript"]) == 3
 
 
