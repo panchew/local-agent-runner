@@ -198,3 +198,14 @@ Additionally:
   `P2__escalation-notice__m3-e3-2-sn-4-blocked.md`: hold until `bin/run-dev-agent` is
   ready; no interim/narrower path authorized. Do not plan or launch E3.2 until the Phase
   Chat lifts this hold. Not a scope change — nothing above this note is amended.
+- **Cross-repo ruling received (2026-07-11):** ai-project-system HQ ruled
+  (`ai-project-system/.ai-project/artifacts/rulings/2026-07-11__ai-project-system-hq__ruling__p7-ae-1-adapter-unblocks-runner-p2.md`,
+  `blocking_resolved: true`) that P7-AE-1 (the adapter Epic) is committed as a flagship,
+  early P7 deliverable, scheduled first once that side's Creation Chat sets the P7 spine
+  (already in progress) — the hold is bounded, not indefinite. **Coordination protocol
+  for closing E3.2, once the adapter lands:** ai-project-system executes P7-AE-1 as one
+  live end-to-end Epic run and writes its transcript into that Epic's own artifacts; that
+  run is then surfaced to **this Milestone Chat (P2-M3) for acceptance** — the Brief
+  requires acceptance in the runner's own parent Milestone Chat, not on the
+  ai-project-system side. Only on that acceptance does E3.2 close, followed by M3 and
+  P2. No interim/scripted path was authorized (reaffirmed by both sides independently).
