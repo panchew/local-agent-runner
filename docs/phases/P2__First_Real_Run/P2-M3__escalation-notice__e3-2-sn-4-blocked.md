@@ -70,3 +70,29 @@ orchestrator-driven path only. Full record:
 notifies you that `bin/run-dev-agent` is ready. Milestone M3 remains open — E3.1 closed,
 E3.2 pending — take no further action on E3.2 in the meantime. This is a wait, not a scope
 change: the Milestone spec is unamended.
+
+---
+
+## Addendum — ai-project-system HQ Ruling received (2026-07-11)
+
+The answering-authority side has ruled formally
+(`ai-project-system/.ai-project/artifacts/rulings/2026-07-11__ai-project-system-hq__ruling__p7-ae-1-adapter-unblocks-runner-p2.md`,
+`blocking_resolved: true`). It **confirms** the hold above, adds a firm commitment, and —
+important for this Milestone Chat specifically — spells out how E3.2 actually closes once
+the adapter lands:
+
+- P7-AE-1 (the adapter Epic) is committed as a **flagship, early P7 deliverable**,
+  scheduled first once ai-project-system's own Creation Chat sets the P7 spine (already
+  in progress). The wait is bounded, not indefinite.
+- No interim/scripted path — reaffirmed independently on that side too.
+- **How E3.2 closes:** ai-project-system executes P7-AE-1 as one live end-to-end Epic run
+  and writes the transcript into that Epic's own artifacts. That run is then **surfaced to
+  this Milestone Chat (P2-M3) for acceptance** — the Brief requires acceptance in the
+  runner's own parent Milestone Chat, not on the ai-project-system side. When you
+  (re-convened) accept that surfaced run, E3.2 closes, then M3, then P2 in sequence — no
+  separate coding work is expected from this Milestone Chat for E3.2 beyond that
+  acceptance review.
+- SN-3 reaffirmed by the answering side: the adapter must not depend on `final_answer`.
+
+Still on hold — this addendum does not authorize resuming E3.2 planning. It just records
+what to expect and how to close it when the Phase Chat lifts the hold.
