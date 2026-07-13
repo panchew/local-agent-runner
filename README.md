@@ -1,43 +1,48 @@
 # Local Agent Runner
 
-**v1.0.0 — Phase P1 (Core Loop Proof) delivered.** The CONTRACT.md §9 atomic proof passed:
-`qwen2.5-coder:14b` converged a read → edit → run-test task in three consecutive containerized
-runs with clean transcripts. Offline test suite: **155 passed, 1 environment-conditional skip.**
+**v2.0.0 — Phase P2 (First Real Run) delivered.** The engine now carries the full CONTRACT.md
+§4 coding toolset and permission model, exposes the adapter-facing `--context` flag CONTRACT §7
+requires, and has proven itself against a real Epic: [ai-project-system](../ai-project-system)
+built the `bin/run-dev-agent` adapter, wired a real tool-calling model, and ran one live,
+non-mocked Epic through its orchestrator with this runner as `dev_command` — converging on
+attempt 1 of 3. Offline test suite: **209 passed, 1 environment-conditional skip.**
 
 A standalone engine that runs a **tool-calling loop** with a local (ollama) model: give it a
 task, a set of tools, and a model, and it drives the model → tool → result loop until the model
 returns a final answer — with a full transcript of every step.
 
-It is deliberately **general-purpose and governance-agnostic.** It will power unattended Epic
+It is deliberately **general-purpose and governance-agnostic.** It now powers unattended Epic
 execution in the [AI Project System](../ai-project-system) via a thin `bin/run-dev-agent`
-adapter (a later phase), but it works for any local-model tool-use task, coding or not — the
-same pattern as a ComfyUI endpoint: a standalone local engine that callers consume.
+adapter, but it works for any local-model tool-use task, coding or not — the same pattern as a
+ComfyUI endpoint: a standalone local engine that callers consume.
 
 ## Start here
 
 **[CONTRACT.md](CONTRACT.md) is the authoritative design — read it first.** This README is just
 orientation.
 
-## What v1.0.0 delivers (Phase P1)
+## What v2.0.0 delivers (Phase P2, on top of v1.0.0)
 
-- **Ollama HTTP client** — `POST /api/chat` (`stream: false`) on a configurable endpoint
-  (default `http://localhost:11434`); never shells out to an `ollama` CLI (CONTRACT §1.1)
-- **Tool-call parser** — native `message.tool_calls` first, else extraction of a tool-call
-  JSON from `message.content` (fenced or bare object), with argument type coercion against
-  the tool's JSON schema (CONTRACT §1.2–1.3, §5)
-- **Three proof tools** — `read_file`, `edit_file`, `run_command`, permission-scoped via
-  `allow_paths`, `allow_commands`/`deny_commands`, and `timeout` (CONTRACT §4)
-- **The execution loop** — repair-don't-crash error feedback, deterministic termination
-  (no-tool-call turn = final answer; `max_iterations` ceiling), §3 Result transcript with
-  per-call `eval_count` and total token accounting (CONTRACT §5–6)
-- **CLI** — `local-agent-runner --model … --task … --tools … --transcript …`; exit codes
-  `0` completed · `2` did-not-converge · `3` config/tool error · `4` runtime error
-  (CONTRACT §2)
-- **The §9 proof** — fixture task, containerized harness, and three committed converging
-  transcripts (`proof/artifacts/`), 3 iterations and 134–432 tokens per run
+- **The full coding toolset** — `write_file`, `list_dir`, and `git` join the P1 proof tools;
+  `allow_paths` enforcement is now uniform across every file tool, and `git` is scoped via
+  `allow_subcommands` (CONTRACT §4)
+- **The `--context` CLI flag** — the last piece of the CONTRACT §7 adapter surface; seeds
+  scoped reference material as a system-role message ahead of the task, exactly what
+  `bin/run-dev-agent` sends (CONTRACT §2, §7)
+- **The SN-3 final-answer repair nudge** — one bounded corrective round when the terminating
+  turn is unusable, never breaking §5's deterministic termination — and proven load-bearing:
+  the first real run's own `final_answer` was a boilerplate refusal on its converging attempt,
+  correctly ignored in favor of the QA `validation_command` exit code (CONTRACT §5, SN-3)
+- **The first real agentic run** — a live Epic executed through ai-project-system's
+  orchestrator, this runner as `dev_command`, non-mocked, accepted in its own parent Milestone
+  Chat: the project Brief's success criterion (`docs/phases/P2__First_Real_Run/`)
 
-Not yet built (later phases): `write_file`/`list_dir`/`git` tools, the library entry point
-with pluggable handlers, the governance adapter, hardening, any UI.
+Carried unchanged from v1.0.0: the Ollama HTTP client, the native/content tool-call parser
+with schema coercion, the execution loop's repair-don't-crash semantics, and the §3
+transcript/CLI exit-code contract.
+
+Not yet built (later phases): the library entry point with pluggable handlers (CF-2, deferred),
+broader hardening (multi-model validation, retry/backoff, concurrency, packaging), any UI.
 
 ## Settled decisions (CONTRACT §10)
 
@@ -61,7 +66,7 @@ local_agent_runner/
   loop.py            # the model → tool → result loop          (CONTRACT §5)
   tool_calls.py      # native-first / content-fallback parsing (CONTRACT §1.2, §5)
   ollama_client.py   # ollama /api/chat HTTP client            (CONTRACT §1.1)
-  tools.py           # proof tools + permission checks         (CONTRACT §4)
+  tools.py           # full coding toolset + permission checks (CONTRACT §4)
   cli.py             # CLI entry point                         (CONTRACT §2)
 proof/               # §9 proof harness, fixture task, committed transcripts
 tests/               # fully offline suite (recorded fixtures; no server/GPU)
