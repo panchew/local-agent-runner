@@ -3,8 +3,8 @@ project: local-agent-runner
 phase: P2
 milestone: M3
 type: milestone
-status: on-hold
-last_updated: 2026-07-11
+status: completed
+last_updated: 2026-07-13
 ---
 
 # Milestone M3 — Adapter Readiness & First Real Run
@@ -172,7 +172,7 @@ Additionally:
 **Target Start:** TBD
 **Target Completion:** TBD
 **Actual Start:** 2026-07-11
-**Actual Completion:** In progress
+**Actual Completion:** 2026-07-13 (see [Closure Declaration](P2-M3__closure-declaration.md))
 
 ---
 
@@ -209,3 +209,7 @@ Additionally:
   requires acceptance in the runner's own parent Milestone Chat, not on the
   ai-project-system side. Only on that acceptance does E3.2 close, followed by M3 and
   P2. No interim/scripted path was authorized (reaffirmed by both sides independently).
+- **Hold lifted; Milestone closed (2026-07-13):** ai-project-system's P7-M26 delivered the
+  adapter and executed the live run; the evidence was independently verified and E3.2
+  accepted — see [Closure Declaration](P2-M3__closure-declaration.md) for the full
+  verification record. `milestone/M3` consolidated into `phase/P2` at `282b18f`.

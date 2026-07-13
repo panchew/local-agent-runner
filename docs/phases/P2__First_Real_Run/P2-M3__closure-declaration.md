@@ -3,7 +3,7 @@ project: local-agent-runner
 phase: P2
 milestone: M3
 type: closure-declaration
-status: stage-1-complete
+status: closed
 closure_date: 2026-07-13
 ---
 
@@ -11,12 +11,10 @@ closure_date: 2026-07-13
 
 **Milestone:** M3 — Adapter Readiness & First Real Run
 **Phase:** P2 — First Real Run
-**Status:** Stage 1 complete (below); Stage 2 (consolidation to `phase/P2`) awaits Phase
-Chat acceptance
+**Status:** Closed — Stage 1 and Stage 2 both complete
 **Completion Date:** 2026-07-13
-**Declared By:** Milestone Chat P2-M3 (Stage 1); Phase Chat P2 acceptance pending for
-Stage 2
-**Merge Commit:** N/A yet — `milestone/M3` has not been consolidated into `phase/P2`
+**Declared By:** Milestone Chat P2-M3 (Stage 1); Phase Chat P2 (Stage 2 acceptance)
+**Merge Commit:** `282b18f` — `milestone/M3` consolidated into `phase/P2`
 
 > This document is the authoritative record of P2-M3's Stage 1 completion, including the
 > acceptance of externally-produced (cross-repo) evidence for E3.2. Chat is ephemeral —
@@ -131,20 +129,37 @@ have misreported success as failure had it been consulted.
 
 ---
 
-## Stage 2: Closure Confirmation (consolidation) — NOT YET PERFORMED
+## Stage 2: Closure Confirmation (consolidation) — COMPLETE
 
 Stage 2 (`milestone/M3` → `phase/P2` consolidation) is a Phase-level acceptance decision,
 not the Milestone Chat's to self-authorize.
 
-**Awaiting from Phase Chat P2:**
-- [ ] Milestone-level acceptance of P2-M3 as a whole
-- [ ] Authorization to merge `milestone/M3` → `phase/P2`
+**Performed by Phase Chat P2 (2026-07-13):**
+- [x] Milestone-level acceptance of P2-M3 as a whole — `git diff phase/P2...milestone/M3
+      --stat` confirmed scope was limited to `cli.py`, adapter-fixture tests/fixtures, and
+      M3 governance artifacts — no scope creep
+- [x] Authorization to merge `milestone/M3` → `phase/P2` — merged `--no-ff`, merge commit
+      `282b18f`; full suite re-run post-merge on `phase/P2` (209 passed, 1 skipped) to
+      confirm the merge itself introduced no regression, and `--help` re-confirmed
+      `--context` is present on `phase/P2` for the first time
+
+**Milestone Delivery Authorization**
+
+```
+MILESTONE DELIVERY AUTHORIZATION
+
+Issuer: Phase Chat (P2 — First Real Run)
+Date: 2026-07-13
+Milestone Reference: P2-M3 — Adapter Readiness & First Real Run
+Authorized Action: Milestone accepted and consolidated
+Merge Instruction: milestone/M3 merged --no-ff to phase/P2 at 282b18f
+```
 
 ## Next Steps
 
-- Once Phase Chat P2 accepts, consolidate `milestone/M3` → `phase/P2` and re-run the full
-  suite post-merge
-- M3 is P2's exit milestone (per the Milestone spec's own Notes): once consolidated, Phase
-  P2 meets its Exit Criteria and Phase Closure (PROJECT-SYSTEM-GUIDELINES.md §5C) follows
-- `epic/E3.1` and `milestone/M3` branches (and the cross-repo `git worktree` ai-project-system
-  used to pin this evidence) retained as history; archive or delete per project policy
+- M3 was P2's exit milestone. Both Milestones (M2, M3) are now closed on `phase/P2`, and
+  the Phase's Exit Criteria (Phase spec) are met — Phase Closure
+  (PROJECT-SYSTEM-GUIDELINES.md §5C) follows next
+- `epic/E3.1` and `milestone/M3` branches (and the cross-repo `git worktree`
+  ai-project-system used to pin this evidence) retained as history; archive or delete per
+  project policy
