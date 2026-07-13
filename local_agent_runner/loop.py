@@ -47,6 +47,19 @@ STATUS_COMPLETED = "completed"
 STATUS_MAX_ITERATIONS_EXCEEDED = "max_iterations_exceeded"
 STATUS_ERROR = "error"
 
+# SN-3 repair nudge (E2.3): at most one extra, tools-disabled call when the
+# terminating turn is unusable. These texts never change `status` — see
+# `_is_unusable_final_answer` / `_request_plain_answer` below.
+_NUDGE_UNUSABLE_FINAL_ANSWER = (
+    "Your previous response was not a usable answer. Please reply now with "
+    "a plain-text final answer to the task above — no tool calls, no JSON."
+)
+_NUDGE_CEILING_EXHAUSTED = (
+    "You have used all available tool calls without giving a final answer. "
+    "Based on everything you have done so far, reply now with a plain-text "
+    "final answer to the task above."
+)
+
 
 @dataclass
 class Result:
@@ -146,6 +159,18 @@ def run(
 
         parsed = parse_tool_call(response.message, tools)
         if isinstance(parsed, FinalAnswer):
+            if _is_unusable_final_answer(parsed.content):
+                # Mirrors the tool-round branch below: the model's own prior
+                # turn must be in context for the corrective call to look
+                # like a normal continuation, not a side channel.
+                messages.append(response.message)
+                nudged = _request_plain_answer(
+                    client, model, messages, options, _NUDGE_UNUSABLE_FINAL_ANSWER
+                )
+                if nudged is not None:
+                    content, eval_count = nudged
+                    tokens += eval_count or 0
+                    return result(STATUS_COMPLETED, final_answer=content)
             return result(STATUS_COMPLETED, final_answer=parsed.content)
 
         if isinstance(parsed, ToolCallRequest):
@@ -170,7 +195,53 @@ def run(
             }
         )
 
+    # Ceiling exhaustion: the last round's assistant turn (and its tool
+    # feedback) is already in `messages` via the tool-round branch above —
+    # no re-append needed before the corrective call.
+    nudged = _request_plain_answer(
+        client, model, messages, options, _NUDGE_CEILING_EXHAUSTED
+    )
+    if nudged is not None:
+        content, eval_count = nudged
+        tokens += eval_count or 0
+        return result(STATUS_MAX_ITERATIONS_EXCEEDED, final_answer=content)
     return result(STATUS_MAX_ITERATIONS_EXCEEDED)
+
+
+def _is_unusable_final_answer(content: str) -> bool:
+    """True when a ``FinalAnswer``'s content is the unmistakable shape of a
+    failed tool-call attempt leaking through, not a real answer (SN-3): empty/
+    whitespace, or content that parses (whole or fenced) to a JSON object
+    containing a ``"name"`` key."""
+    if not content or not content.strip():
+        return True
+    fence = _JSON_FENCE.search(content)
+    candidate = fence.group(1) if fence else content.strip()
+    try:
+        parsed = json.loads(candidate)
+    except ValueError:
+        return False
+    return isinstance(parsed, dict) and "name" in parsed
+
+
+def _request_plain_answer(
+    client: OllamaClient,
+    model: str,
+    messages: List[Union[ChatMessage, Dict[str, Any]]],
+    options: Optional[Dict[str, Any]],
+    nudge_text: str,
+) -> Optional[Tuple[str, Optional[int]]]:
+    """The SN-3 corrective call: one ``tools=None`` request asking directly
+    for a plain-text answer, appended to a *copy* of ``messages`` (the
+    caller's list is not mutated here). Returns ``(content, eval_count)`` on
+    success; on ``OllamaClientError`` returns ``None`` — the caller falls
+    back to the pre-nudge result, never retries."""
+    corrective_messages = list(messages) + [{"role": "user", "content": nudge_text}]
+    try:
+        response = client.chat(model, corrective_messages, tools=None, options=options)
+    except OllamaClientError:
+        return None
+    return response.message.content, response.eval_count
 
 
 # E1.2 does not expose the attempted call on RepairableError, so the

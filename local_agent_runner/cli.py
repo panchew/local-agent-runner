@@ -78,6 +78,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="path to a tools.json: enabled tools + permissions (§4)",
     )
     parser.add_argument(
+        "--context",
+        help="path to a file of optional scoped reference material (§3 context)",
+    )
+    parser.add_argument(
         "--max-iterations",
         type=int,
         default=DEFAULT_MAX_ITERATIONS,
@@ -102,6 +106,15 @@ def _load_task(args: argparse.Namespace) -> str:
         return Path(args.task).read_text()
     except OSError as exc:
         raise ConfigError(f"cannot read task file '{args.task}': {exc}")
+
+
+def _load_context(args: argparse.Namespace) -> Optional[str]:
+    if args.context is None:
+        return None
+    try:
+        return Path(args.context).read_text()
+    except OSError as exc:
+        raise ConfigError(f"cannot read context file '{args.context}': {exc}")
 
 
 def _load_permissions(tools_path: str) -> ToolPermissions:
@@ -176,6 +189,7 @@ def main(
     try:
         args = build_parser().parse_args(argv)
         task = _load_task(args)
+        context = _load_context(args)
         permissions = _load_permissions(args.tools)
         transcript_path = _check_transcript_path(args.transcript)
     except ConfigError as exc:
@@ -189,6 +203,7 @@ def main(
             permissions,
             endpoint=args.endpoint,
             max_iterations=args.max_iterations,
+            context=context,
             client=client,
         )
     except Exception as exc:  # loop absorbs OllamaClientError; this is the

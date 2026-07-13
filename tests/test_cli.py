@@ -201,8 +201,11 @@ class TestDidNotConverge:
 
         data = json.loads(workspace["transcript"].read_text())
         assert data["status"] == "max_iterations_exceeded"
-        # --max-iterations reached the loop, observable via the fake
-        assert client.calls == 3
+        # --max-iterations reached the loop, observable via the fake; plus
+        # the SN-3 corrective call (E2.3) ceiling exhaustion triggers —
+        # EndlessToolCaller ignores tools=None so it too comes back
+        # tool-call-shaped, but that's still the one-and-only nudge attempt.
+        assert client.calls == 3 + 1
         assert len(data["transcript"]) == 3
 
 
@@ -280,6 +283,42 @@ class TestConfigErrors:
         )
         assert rc == EXIT_CONFIG_ERROR
         assert_one_stderr_line(capsys.readouterr())
+
+
+# ---------------------------------------------------------------------------
+# --context — the two mechanical unit cases (the message-order proof that
+# --context content reaches the model as a system-role message lives in
+# tests/test_adapter_contract.py, alongside the message-recording FakeClient)
+# ---------------------------------------------------------------------------
+
+
+class TestContext:
+    def test_context_omitted_is_unchanged(self, workspace, capsys):
+        fake = FakeClient(
+            [
+                native_call_response(
+                    "read_file", {"path": str(workspace["target"])}, eval_count=28
+                ),
+                final_answer_response("Two lines of text.", eval_count=12),
+            ]
+        )
+
+        rc = main(base_argv(workspace), client=fake)
+
+        assert rc == EXIT_COMPLETED
+        captured = capsys.readouterr()
+        assert captured.out == "Two lines of text.\n"
+        data = json.loads(workspace["transcript"].read_text())
+        assert data["status"] == "completed"  # identical to pre-Epic behavior
+
+    def test_unreadable_context_file(self, workspace, capsys):
+        argv = base_argv(
+            workspace, context=workspace["tmp_path"] / "missing-context.md"
+        )
+        rc = main(argv, client=FakeClient([]))
+        assert rc == EXIT_CONFIG_ERROR
+        err = assert_one_stderr_line(capsys.readouterr())
+        assert "context file" in err
 
 
 # ---------------------------------------------------------------------------
