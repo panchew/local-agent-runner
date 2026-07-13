@@ -2,27 +2,26 @@
 type: phase-closure-declaration
 phase: P2
 name: First Real Run
-status: stage-1-complete
-merge_commit: null
-tag: null
-master_head_at_closure: null
-closed_date: null
-closed_by: null
-acceptance_model: null
+status: closed
+merge_commit: 367bd23
+tag: v2.0.0
+main_head_at_closure: 367bd23
+closed_date: 2026-07-13
+closed_by: Phase Chat (P2); consolidated and accepted by HQ Chat
+acceptance_model: SN-13 default-accept — explicit HQ acceptance given in-session 2026-07-13; no Review Decision artifact required
 ---
 
 # Phase P2 Closure Declaration
 
-**Phase P2 — First Real Run is complete on `phase/P2` (`c6ee545`). Master consolidation
-(PSG §5C Steps 5, 7, 8) and this declaration's Step 9 sign-off are HQ Chat's / CFO's to
-perform — merges to `master` require explicit CFO authorization
-(`governance/systems/roles-authorization-team-governance.md`, "Merging to Branches"),
-not Phase Chat action.**
+**Phase P2 — First Real Run is closed.**
+
+Merge commit `367bd23` landed on `main` (no-ff merge of `phase/P2`, per the P1 no-remote
+adaptation — this repo has no hosted remote to open a PR against). Tagged `v2.0.0`.
 
 > This document is Stage 1 of the phase-closure record (PSG §5C Steps 1–4, prepared by
-> this Phase Chat). Stage 2 — the `phase/P2` → `master` merge, the `v2.0.0` tag, and this
-> declaration's final sign-off — is recorded below once HQ Chat performs it. Chat is
-> ephemeral; this artifact is the record.
+> the Phase Chat) plus Stage 2 (PSG §5C Steps 5, 7, 8, 9 — the `phase/P2` → `main` merge,
+> the `v2.0.0` tag, and this sign-off), performed by HQ Chat under CFO authorization
+> (`governance/systems/roles-authorization-team-governance.md`, "Merging to Branches").
 
 ---
 
@@ -103,21 +102,31 @@ not Phase Chat action.**
 
 ---
 
-## Stage 2: Consolidation to `master` — NOT YET PERFORMED
+## Stage 2: Consolidation to `main` — PERFORMED BY HQ CHAT
 
 Per `governance/systems/roles-authorization-team-governance.md`'s "Merging to Branches"
-table, `master` merges require **explicit CFO authorization** — this is HQ Chat's /
-CFO's act, not something this Phase Chat performs or self-authorizes.
+table, `main` (this repo's production branch; the table's generic "master" row) merges
+require explicit CFO authorization — performed here by HQ Chat under that authorization,
+not by the Phase Chat.
 
-**Awaiting from HQ Chat:**
-- [ ] Review of Stage 1 (this document) and the Phase spec's completion criteria
-- [ ] PSG §5C Step 5 — consolidate `phase/P2` → `master` (local no-ff merge, per the P1
-      no-remote adaptation; no hosted remote exists to open a PR against)
-- [ ] PSG §5C Step 8 — tag the closure commit `v2.0.0`
-- [ ] PSG §5C Step 9 — record this declaration's `merge_commit`, `tag`,
-      `master_head_at_closure`, `closed_date`, `closed_by`, and `acceptance_model` in the
-      frontmatter above, and complete the sign-off below
+- [x] Review of Stage 1 (this document) and the Phase spec's completion criteria — HQ
+      independently re-verified: full offline suite re-run post-merge (209 passed / 1
+      skipped, matching Stage 1's count exactly), and a direct grep of
+      `local_agent_runner/` confirmed no `subprocess` call ever shells out to the `ollama`
+      CLI (CONTRACT §1 invariant #1 holds).
+- [x] PSG §5C Step 5 — consolidated `phase/P2` → `main` via local no-ff merge (no hosted
+      remote exists to open a PR against): merge commit `367bd23`.
+- [x] PSG §5C Step 8 — tagged the closure commit `v2.0.0`.
+- [x] PSG §5C Step 9 — frontmatter above records `merge_commit`, `tag`,
+      `main_head_at_closure`, `closed_date`, `closed_by`, and `acceptance_model`; sign-off
+      below.
 
 ## Sign-Off
 
-*(pending Stage 2 — recorded by HQ Chat)*
+Phase P2 is closed. At `v2.0.0` the runner carries the full CONTRACT §4 coding toolset, a
+bounded final-answer repair nudge proven load-bearing on a real run, and closes the last
+CONTRACT §7 runner-side gap (`--context`). The project's founding claim is no longer a
+proof-of-concept result: a live, non-mocked Epic ran through ai-project-system's own
+orchestrator with this engine as `dev_command` and converged on the first attempt. What
+remains (CF-2, CF-4) is deferred scope and hardening on top of a runner now proven in
+production use, not open questions about whether the approach works.
