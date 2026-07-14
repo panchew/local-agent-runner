@@ -4,8 +4,8 @@
 
 governance:
   source: https://github.com/panchew/ai-project-system
-  version: "5.1.0"
-  ref: 2bd76ff4a3ad7cbaa10c05e7d5beef4e97fff324  # 8 commits past v5.1.0 (includes P7-AE-1 ruling); no newer tag cut yet
+  version: "6.0.0"
+  ref: v6.0.0
 
 project:
   name: local-agent-runner
