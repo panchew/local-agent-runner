@@ -1,0 +1,9 @@
+{
+  "_comment": "Coding tool set for the E33.2 Agentic/Local run (ai-project-system P10-M33-E33.2) executing local-agent-runner Epic P3-M4-E4.1 (CF-2 public run API). allow_paths uses an absolute-path glob (tools.py path_permitted() fnmatchcase()s against Path.resolve()'s absolute output, so a relative './**' never matches) — '*/local-agent-runner/**' matches this repo by directory name on any host, plus '/workspace/**' for the sandbox mount. Commands limited to pytest; git scoped to read/stage/commit.",
+  "enabled": ["read_file", "write_file", "edit_file", "list_dir", "run_command", "git"],
+  "allow_paths": ["/workspace/**", "*/local-agent-runner/**"],
+  "allow_commands": ["pytest*", "python -m pytest*", "python3 -m pytest*"],
+  "deny_commands": [],
+  "allow_subcommands": ["status", "diff", "log", "show", "add", "commit", "branch", "checkout"],
+  "timeout": 300
+}
