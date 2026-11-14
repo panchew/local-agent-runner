@@ -2,10 +2,15 @@
 # AI Project System — Project Configuration Contract
 # Spec: .governance/governance/ai-project-yml-spec.md
 
+# framework_version: adoption stamp — the AI Project System release this project has
+# adopted. Set by the v7.0.0 bump procedure (P10-M33-E33.1). Confirm with:
+#   grep '^framework_version:' .ai-project.yml
+framework_version: v7.0.0
+
 governance:
   source: https://github.com/panchew/ai-project-system
-  version: "6.0.0"
-  ref: v6.0.0
+  version: "7.0.0"
+  ref: v7.0.0
 
 project:
   name: local-agent-runner
