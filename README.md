@@ -5,7 +5,12 @@
 requires, and has proven itself against a real Epic: [ai-project-system](../ai-project-system)
 built the `bin/run-dev-agent` adapter, wired a real tool-calling model, and ran one live,
 non-mocked Epic through its orchestrator with this runner as `dev_command` — converging on
-attempt 1 of 3. Offline test suite: **209 passed, 1 environment-conditional skip.**
+attempt 1 of 3.
+
+**Unreleased, on top of v2.0.0 (Phase P3, CF-2):** pluggable custom tools for the library API
+(`run(..., custom_tools=[...])`, CONTRACT §4.1), with examples and a tracked verification of a
+tool that calls an external service. See `docs/phases/P3__Library_Surface/`. Offline test suite:
+**275 passed** (the console-script test skips when the package isn't installed on `PATH`).
 
 A standalone engine that runs a **tool-calling loop** with a local (ollama) model: give it a
 task, a set of tools, and a model, and it drives the model → tool → result loop until the model
@@ -41,8 +46,67 @@ Carried unchanged from v1.0.0: the Ollama HTTP client, the native/content tool-c
 with schema coercion, the execution loop's repair-don't-crash semantics, and the §3
 transcript/CLI exit-code contract.
 
-Not yet built (later phases): the library entry point with pluggable handlers (CF-2, deferred),
-broader hardening (multi-model validation, retry/backoff, concurrency, packaging), any UI.
+Not yet built (later phases): broader hardening (multi-model validation, retry/backoff,
+concurrency, packaging), any UI.
+
+## Custom tools (library API)
+
+The CLI exposes only the vetted built-ins (CONTRACT §4). Library callers can register their own
+in-process tools. These are plain typed Python functions, and they run in the same loop with the
+same parsing, type coercion, and repair-on-error behavior:
+
+```python
+from local_agent_runner import ToolPermissions, custom_tool, run
+
+@custom_tool
+def hello_world(name: str) -> str:
+    """Return a greeting for someone. Pass 'name' as the person to greet."""
+    return f"Hello, {name}!"
+
+result = run("qwen2.5-coder:14b", "Greet Ada.", ToolPermissions(), custom_tools=[hello_world])
+```
+
+The schema comes from the signature (`str`/`int`/`float`/`bool`; parameters without defaults
+are required) and the description from the docstring. Override either with
+`@custom_tool(name=..., description=..., parameters=...)`. Handlers return a `str`, a
+`ToolResult`, or any JSON-encodable value. Exceptions are fed back to the model rather than
+raised. Custom tools are enabled by passing them to `run()`. `ToolPermissions` does not apply to
+them, so a handler runs with the caller's privileges. A custom tool can't reuse a built-in's
+name.
+
+Several custom tools can be registered together, even when they share argument names. Calls are
+routed by tool name, and there's no global registry: a tool is offered only if it's passed to
+`run()`.
+
+Working examples in `examples/`, each runnable against a live Ollama:
+
+- `hello_world_tool.py`: one custom tool (`python examples/hello_world_tool.py --model qwen2.5-coder:14b`)
+- `goodbye_world_tool.py` and `multi_tool_proof.py`: a second, independent tool, plus a proof that
+  both work in one run (`python examples/multi_tool_proof.py --model qwen2.5-coder:14b`)
+- `ticket_service/`: a custom tool that calls an **external service**. It includes
+  `create_ticket`/`get_ticket` (`ticket_tools.py`), a fake third-party API with fault injection
+  (`fake_service.py`) and a live-model proof (`live_proof.py`). The module docstring of
+  `ticket_tools.py` describes the patterns to copy: credentials kept out of the model's reach,
+  a pinned host, idempotency keys, and signed and verified responses.
+
+### Verifying a custom tool that calls an external service
+
+```bash
+proof/run-custom-tool-verification.sh          # offline: tracked checks + mutation check
+LIVE=1 proof/run-custom-tool-verification.sh   # also run the live-model proof (needs Ollama)
+```
+
+The script runs the tracked security, idempotency and integrity checks in
+`tests/test_ticket_service_tool.py`. Then a mutation check disables each protection in the tool,
+one at a time, and confirms the checks catch it. Results are written to
+`proof/artifacts/custom-tools/ticket-service/`:
+
+- `verification-results.md` / `.json`: each check's claim, outcome and recorded evidence
+- `mutation-results.md` / `.json`: which checks catch which disabled protection
+- `history.jsonl`: one line per run (time, commit, verdict), for tracking over time
+- `live-proof.json` (with `LIVE=1`): the real-model run and its state checks
+
+A plain `pytest` runs the same checks but writes nothing.
 
 ## Settled decisions (CONTRACT §10)
 
@@ -67,7 +131,9 @@ local_agent_runner/
   tool_calls.py      # native-first / content-fallback parsing (CONTRACT §1.2, §5)
   ollama_client.py   # ollama /api/chat HTTP client            (CONTRACT §1.1)
   tools.py           # full coding toolset + permission checks (CONTRACT §4)
+  custom_tools.py    # @custom_tool: pluggable in-process handlers (CONTRACT §2, §10.1)
   cli.py             # CLI entry point                         (CONTRACT §2)
+examples/            # custom tool examples (hello_world, goodbye_world, ticket_service) + live proofs
 proof/               # §9 proof harness, fixture task, committed transcripts
 tests/               # fully offline suite (recorded fixtures; no server/GPU)
 CONTRACT.md

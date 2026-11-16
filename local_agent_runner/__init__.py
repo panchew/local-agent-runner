@@ -20,7 +20,8 @@ from local_agent_runner.loop import (
     STATUS_COMPLETED,
     STATUS_MAX_ITERATIONS_EXCEEDED,
 )
-from local_agent_runner.tools import ToolPermissions
+from local_agent_runner.tools import ToolPermissions, ToolResult
+from local_agent_runner.custom_tools import CustomTool, custom_tool
 
 __all__ = [
     "ChatMessage",
@@ -32,6 +33,9 @@ __all__ = [
     "Result",
     "run",
     "ToolPermissions",
+    "ToolResult",
+    "CustomTool",
+    "custom_tool",
     "STATUS_COMPLETED",
     "STATUS_MAX_ITERATIONS_EXCEEDED",
 ]
