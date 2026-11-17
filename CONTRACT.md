@@ -114,6 +114,48 @@ Initial built-ins (the coding set):
 
 Custom/non-coding tools are registered through the library interface (§2).
 
+### 4.1 Custom tools (library interface)
+
+Delivered in P3-M4-E4.2, the second half of carry-forward CF-2. This section implements §10.1's
+"pluggable handlers for the library interface".
+
+```python
+from local_agent_runner import ToolPermissions, custom_tool, run
+
+@custom_tool
+def hello_world(name: str) -> str:
+    """Return a greeting for someone. Pass 'name' as the person to greet."""
+    return f"Hello, {name}!"
+
+result = run(model, task, ToolPermissions(), custom_tools=[hello_world])
+```
+
+- **Definition.** `@custom_tool` builds a `CustomTool` from a typed function:
+  - **name:** the function name
+  - **description:** the docstring (required, since the model chooses tools by their description)
+  - **schema:** the signature, with `str`/`int`/`float`/`bool` mapped to JSON schema types (the
+    §1.3 coercion scope). Parameters without a default are required.
+
+  `name=`, `description=` and `parameters=` override these. Signature problems raise an error
+  when the function is decorated.
+- **Same loop as the built-ins.** Custom definitions are sent after the enabled built-ins.
+  Custom calls are parsed, validated against the enabled tool names and coerced (§1.2, §1.3) the
+  same way as built-in calls. They're also repaired the same way: an unknown tool, a bad
+  argument or a handler exception is fed back to the model as the tool result (§5).
+- **Handler contract.** The handler is called as `handler(**arguments)`. It returns a `str`, a
+  `ToolResult` (passed through), or any other value, which is JSON-encoded. Exceptions never
+  escape the loop.
+- **Enabling.** Passing a tool to `run()` is what enables it. There's no global registry, and
+  `ToolPermissions` doesn't apply to custom tools, so a handler runs with the caller's own
+  privileges. Scoping what a custom tool may do is the caller's responsibility.
+- **Names.** A custom tool can't shadow a built-in tool's name, and custom tool names must be
+  unique. Either mistake raises `ValueError` before the first model call; it's the caller's
+  error, the same principle as the CLI's exit 3.
+- **CLI.** Unchanged. The CLI path still offers only the vetted built-ins (see above).
+- **Output size.** Unlike `run_command`, custom tool output is not capped by the runner. A tool
+  that returns external data should enforce its own limit (§6), as the `examples/ticket_service/`
+  reference tool does.
+
 ---
 
 ## 5. The execution loop (behavior)

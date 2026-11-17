@@ -1,0 +1,215 @@
+{
+  "baseline": {
+    "failed": [],
+    "total": 29
+  },
+  "verdict": "PASS",
+  "mutations": [
+    {
+      "id": "M01",
+      "protection_disabled": "no redaction of secrets in tool output",
+      "expected_to_fail": [
+        "SEC-01"
+      ],
+      "actually_failed": [
+        "SEC-01"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M02",
+      "protection_disabled": "truncate service error before redacting (partial-key leak)",
+      "expected_to_fail": [
+        "SEC-01"
+      ],
+      "actually_failed": [
+        "SEC-01"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M03",
+      "protection_disabled": "follow redirects",
+      "expected_to_fail": [
+        "SEC-04"
+      ],
+      "actually_failed": [
+        "SEC-04"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M04",
+      "protection_disabled": "no ticket_id format validation",
+      "expected_to_fail": [
+        "SEC-03"
+      ],
+      "actually_failed": [
+        "SEC-03"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M05",
+      "protection_disabled": "allow plain http to any host",
+      "expected_to_fail": [
+        "SEC-05"
+      ],
+      "actually_failed": [
+        "SEC-05"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M06",
+      "protection_disabled": "no streaming size cap (only the declared Content-Length check remains)",
+      "expected_to_fail": [
+        "SEC-09"
+      ],
+      "actually_failed": [
+        "SEC-09"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M07",
+      "protection_disabled": "fresh idempotency key per tool call (repeat calls not deduplicated)",
+      "expected_to_fail": [
+        "IDEM-01",
+        "IDEM-06"
+      ],
+      "actually_failed": [
+        "IDEM-01",
+        "IDEM-06",
+        "IDEM-08",
+        "INT-02",
+        "INT-06"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M07b",
+      "protection_disabled": "fresh idempotency key per transport retry",
+      "expected_to_fail": [
+        "IDEM-02",
+        "IDEM-03"
+      ],
+      "actually_failed": [
+        "IDEM-01",
+        "IDEM-02",
+        "IDEM-03",
+        "IDEM-06",
+        "IDEM-08",
+        "INT-02",
+        "INT-06"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M08",
+      "protection_disabled": "no idempotency key sent at all",
+      "expected_to_fail": [
+        "IDEM-01",
+        "IDEM-02"
+      ],
+      "actually_failed": [
+        "IDEM-01",
+        "IDEM-02",
+        "IDEM-03",
+        "IDEM-04",
+        "IDEM-05",
+        "IDEM-06",
+        "IDEM-07",
+        "IDEM-08",
+        "INT-01",
+        "INT-02",
+        "INT-04",
+        "INT-05",
+        "INT-06",
+        "SEC-01",
+        "SEC-08"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M09",
+      "protection_disabled": "no transport retries",
+      "expected_to_fail": [
+        "IDEM-02",
+        "IDEM-03",
+        "IDEM-04"
+      ],
+      "actually_failed": [
+        "IDEM-02",
+        "IDEM-03",
+        "IDEM-04",
+        "IDEM-05",
+        "IDEM-06",
+        "INT-06",
+        "SEC-08"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M10",
+      "protection_disabled": "idempotency key not scoped to the run",
+      "expected_to_fail": [
+        "IDEM-08"
+      ],
+      "actually_failed": [
+        "IDEM-08"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M11",
+      "protection_disabled": "no response signature verification",
+      "expected_to_fail": [
+        "INT-02",
+        "INT-03"
+      ],
+      "actually_failed": [
+        "INT-02",
+        "INT-03"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M12",
+      "protection_disabled": "no semantic check that the returned ticket matches the request",
+      "expected_to_fail": [
+        "INT-04"
+      ],
+      "actually_failed": [
+        "INT-04"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    },
+    {
+      "id": "M13",
+      "protection_disabled": "secrets passed to the model-facing schema",
+      "expected_to_fail": [
+        "SEC-01"
+      ],
+      "actually_failed": [
+        "SEC-01",
+        "SEC-07"
+      ],
+      "status": "killed",
+      "expected_but_passed": []
+    }
+  ]
+}

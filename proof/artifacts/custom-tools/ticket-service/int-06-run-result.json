@@ -1,0 +1,68 @@
+{
+  "status": "completed",
+  "final_answer": "Created T-1 and T-2.",
+  "transcript": [
+    {
+      "tool_call": {
+        "name": "create_ticket",
+        "args": {
+          "title": "Email outage",
+          "priority": "high"
+        }
+      },
+      "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Email outage\", \"priority\": \"high\"}, \"replayed\": true}",
+      "ms": 5,
+      "eval_count": 1
+    },
+    {
+      "tool_call": {
+        "name": "create_ticket",
+        "args": {
+          "title": "New laptop",
+          "priority": "low"
+        }
+      },
+      "tool_result": "{\"ticket\": {\"id\": \"T-2\", \"title\": \"New laptop\", \"priority\": \"low\"}, \"replayed\": false}",
+      "ms": 47,
+      "eval_count": 1
+    },
+    {
+      "tool_call": {
+        "name": "create_ticket",
+        "args": {
+          "title": "Email outage",
+          "priority": "high"
+        }
+      },
+      "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Email outage\", \"priority\": \"high\"}, \"replayed\": true}",
+      "ms": 45,
+      "eval_count": 1
+    },
+    {
+      "tool_call": {
+        "name": "get_ticket",
+        "args": {
+          "ticket_id": "T-2"
+        }
+      },
+      "tool_result": "{\"ticket\": {\"id\": \"T-2\", \"title\": \"New laptop\", \"priority\": \"low\"}}",
+      "ms": 43,
+      "eval_count": 1
+    },
+    {
+      "tool_call": {
+        "name": "get_ticket",
+        "args": {
+          "ticket_id": "T-1"
+        }
+      },
+      "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Email outage\", \"priority\": \"high\"}}",
+      "ms": 47,
+      "eval_count": 1
+    }
+  ],
+  "iterations": 5,
+  "tokens": 6,
+  "model": "scripted-model",
+  "duration_ms": 190
+}

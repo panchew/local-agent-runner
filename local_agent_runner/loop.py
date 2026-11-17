@@ -22,8 +22,13 @@ import json
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
+from local_agent_runner.custom_tools import (
+    CustomTool,
+    execute_custom_tool,
+    index_custom_tools,
+)
 from local_agent_runner.ollama_client import (
     DEFAULT_ENDPOINT,
     ChatMessage,
@@ -109,6 +114,7 @@ def run(
     context: Optional[str] = None,
     options: Optional[Dict[str, Any]] = None,
     client: Optional[OllamaClient] = None,
+    custom_tools: Optional[Iterable[CustomTool]] = None,
 ) -> Result:
     """Run the §5 loop and return the §3 Result.
 
@@ -116,10 +122,16 @@ def run(
     :class:`OllamaClient` is built for ``endpoint``. ``system`` and
     ``context`` seed optional leading messages per §5 (``context`` as a
     system-role message); the CLI does not surface them in M1.
+
+    ``custom_tools`` registers in-process handlers (``@custom_tool``) next
+    to the built-ins enabled in ``permissions``. They're offered to the
+    model, parsed, coerced and repaired the same way. Raises ``ValueError``
+    before any model call if a name is duplicated or shadows a built-in.
     """
+    custom = index_custom_tools(custom_tools)
     if client is None:
         client = OllamaClient(endpoint)
-    tools = tool_definitions(permissions)
+    tools = tool_definitions(permissions) + [t.definition() for t in custom.values()]
 
     messages: List[Union[ChatMessage, Dict[str, Any]]] = []
     if system is not None:
@@ -174,9 +186,11 @@ def run(
             return result(STATUS_COMPLETED, final_answer=parsed.content)
 
         if isinstance(parsed, ToolCallRequest):
-            feedback = execute_tool(
-                parsed.name, parsed.arguments, permissions
-            ).output  # ok or not — a tool-level error is repair feedback (§5)
+            if parsed.name in custom:
+                outcome = execute_custom_tool(custom[parsed.name], parsed.arguments)
+            else:
+                outcome = execute_tool(parsed.name, parsed.arguments, permissions)
+            feedback = outcome.output  # ok or not — a tool-level error is repair feedback (§5)
             name, args = parsed.name, parsed.arguments
         else:  # RepairableError
             feedback = parsed.message

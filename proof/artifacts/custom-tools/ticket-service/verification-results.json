@@ -1,0 +1,498 @@
+{
+  "run": {
+    "timestamp_utc": "2026-11-15T20:45:29+00:00",
+    "git_commit": "bec4a62",
+    "git_dirty": true,
+    "python": "3.12.3",
+    "platform": "Linux-6.18.44-fc-v310-x86_64-with-glibc2.39",
+    "pytest": "9.2.0",
+    "requests": "2.34.2",
+    "command": "pytest -q -p no:cacheprovider tests/test_ticket_service_tool.py --verification-report /workspace/local-agent-runner/proof/artifacts/custom-tools/ticket-service"
+  },
+  "verdict": "PASS",
+  "summary": {
+    "security": {
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0
+    },
+    "idempotency": {
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0
+    },
+    "integrity": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "error": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "SEC-01",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_secrets_never_reach_the_model",
+      "claim": "API key and signing secret never appear in anything sent to the model or stored in the Result, even when the service echoes them in an error.",
+      "outcome": "passed",
+      "duration_s": 0.05,
+      "evidence": {
+        "service_echoed_api_key_in_error": true,
+        "api_key_offset_in_service_error": 185,
+        "redaction_marker_in_error": true,
+        "error_shown_to_model_tail": "................debug: Authorization: Bearer [REDACTED] | si",
+        "secret_8char_fragments_in_model_facing_text": 0,
+        "secrets_in_tool_schemas": 0,
+        "authenticated_request_succeeded": true
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-02",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_model_cannot_choose_the_host",
+      "claim": "Extra URL/host arguments from the model are rejected before any request; the pinned host is the only one contacted.",
+      "outcome": "passed",
+      "duration_s": 0.051,
+      "evidence": {
+        "attempts": 3,
+        "attacker_hits": 0,
+        "requests_reaching_service": 0,
+        "sample_feedback": "create_ticket: unexpected error while executing: TypeError: make_ticket_tools.<locals>.create_ticket() got an unexpected keyword argument 'url'"
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-03",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_ticket_id_injection_is_rejected_before_any_request",
+      "claim": "Path-traversal / URL / injection payloads in ticket_id are rejected locally; the service (and its /admin honeypot) is never reached.",
+      "outcome": "passed",
+      "duration_s": 0.006,
+      "evidence": {
+        "payloads_tried": [
+          "../admin/export",
+          "T-1/../../admin",
+          "T-1?admin=1",
+          "%2e%2e/admin",
+          "T-1#frag",
+          "http://127.0.0.1:1/admin",
+          "T-1\n",
+          " T-1",
+          "T-1 OR 1=1"
+        ],
+        "requests_reaching_service": 0,
+        "admin_honeypot_hits": 0,
+        "honeypot_is_live": true
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-04",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_redirects_are_not_followed",
+      "claim": "A redirect to another host is refused, not followed; the attacker host receives nothing (no credentials, no body).",
+      "outcome": "passed",
+      "duration_s": 0.054,
+      "evidence": {
+        "feedback": "create_ticket: service answered with a redirect (HTTP 302); redirects are not followed",
+        "attacker_hits": 0,
+        "requests_to_service": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-05",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_insecure_base_urls_are_refused",
+      "claim": "Plain http:// to a non-loopback host, or URLs carrying credentials/query, are refused when the tools are built.",
+      "outcome": "passed",
+      "duration_s": 0.001,
+      "evidence": {
+        "refused": {
+          "http://tickets.example.com": "refusing plain http:// to a non-loopback host; use https://",
+          "https://user:pw@tickets.example.com": "base_url must not contain credentials, a query or a fragment",
+          "https://tickets.example.com?k=v": "base_url must not contain credentials, a query or a fragment",
+          "ftp://tickets.example.com": "base_url must be an http(s) URL, got 'ftp://tickets.example.com'"
+        },
+        "accepted": [
+          "https://tickets.example.com",
+          "https://tickets.example.com/api",
+          "http://127.0.0.1:8080",
+          "http://localhost:8080"
+        ]
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-06[no-builtins]",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_prompt_injection_in_service_data_cannot_escalate[no-builtins]",
+      "claim": "Injected instructions in third-party data reach the model as data, but a model that obeys them is stopped by the permission layer: no command runs.",
+      "outcome": "passed",
+      "duration_s": 0.006,
+      "evidence": {
+        "injection_delivered_as_data": true,
+        "escalation_feedback": "unknown tool 'run_command'. The enabled tools are: create_ticket, get_ticket.",
+        "command_executed": false
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-06[run_command-scoped]",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_prompt_injection_in_service_data_cannot_escalate[run_command-scoped]",
+      "claim": "Injected instructions in third-party data reach the model as data, but a model that obeys them is stopped by the permission layer: no command runs.",
+      "outcome": "passed",
+      "duration_s": 0.004,
+      "evidence": {
+        "injection_delivered_as_data": true,
+        "escalation_feedback": "run_command: command 'touch /tmp/pytest-of-model/pytest-103/test_prompt_injection_in_servi1/pwned' is denied. Only commands matching these allow_commands patterns are permitted (deny_commands patterns win): pytest*",
+        "command_executed": false
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-07",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_wrong_credentials_fail_cleanly",
+      "claim": "With a wrong API key the call fails with a clear 401, nothing is created, and the wrong key is not echoed back.",
+      "outcome": "passed",
+      "duration_s": 0.003,
+      "evidence": {
+        "feedback": "create_ticket: service returned HTTP 401: invalid api key",
+        "tickets_on_server": 0,
+        "wrong_key_in_model_text": false
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-08",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_hanging_service_is_time_bounded",
+      "claim": "A service that never answers costs at most timeout x attempts; the model gets an error and the run still completes.",
+      "outcome": "passed",
+      "duration_s": 0.906,
+      "evidence": {
+        "elapsed_s": 0.91,
+        "bound_s": 1.9,
+        "attempts_sent": 3,
+        "feedback": "create_ticket: service unreachable after 3 attempt(s) (ReadTimeout)"
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-09[declared-length]",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_oversized_response_is_rejected[declared-length]",
+      "claim": "A multi-megabyte response is rejected (not truncated, not forwarded), whether or not it declares its size up front.",
+      "outcome": "passed",
+      "duration_s": 0.05,
+      "evidence": {
+        "feedback": "get_ticket: response too large (5000075 bytes > 64000); rejected",
+        "feedback_chars": 64,
+        "largest_message_to_model_chars": 64
+      },
+      "failure": null
+    },
+    {
+      "id": "SEC-09[undeclared-length]",
+      "category": "security",
+      "test": "tests/test_ticket_service_tool.py::test_oversized_response_is_rejected[undeclared-length]",
+      "claim": "A multi-megabyte response is rejected (not truncated, not forwarded), whether or not it declares its size up front.",
+      "outcome": "passed",
+      "duration_s": 0.053,
+      "evidence": {
+        "feedback": "get_ticket: response exceeded 64000 bytes; rejected",
+        "feedback_chars": 51,
+        "largest_message_to_model_chars": 51
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-01",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_repeated_identical_create_makes_one_ticket",
+      "claim": "The model calling create_ticket twice with the same arguments creates one ticket; the second call is a replay of the first.",
+      "outcome": "passed",
+      "duration_s": 0.048,
+      "evidence": {
+        "posts_sent": 2,
+        "distinct_idempotency_keys": 1,
+        "tickets_on_server": 1,
+        "second_call_replayed": true
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-02",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_lost_response_after_commit_is_retried_safely",
+      "claim": "If the service commits but the connection drops before the reply, the transport retry reuses the key: one ticket, correct result.",
+      "outcome": "passed",
+      "duration_s": 0.006,
+      "evidence": {
+        "posts_sent": 2,
+        "first_attempt_status": null,
+        "distinct_idempotency_keys": 1,
+        "tickets_on_server": 1,
+        "result_replayed": true
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-03",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_timeout_after_commit_is_retried_safely",
+      "claim": "If the service commits but replies too slowly, the timed-out request is retried with the same key: one ticket.",
+      "outcome": "passed",
+      "duration_s": 0.307,
+      "evidence": {
+        "posts_sent": 2,
+        "distinct_idempotency_keys": 1,
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-04",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_transient_unavailability_is_retried",
+      "claim": "503s before the commit are retried with the same key until success: exactly one ticket.",
+      "outcome": "passed",
+      "duration_s": 0.009,
+      "evidence": {
+        "posts_sent": 3,
+        "statuses": [
+          503,
+          503,
+          201
+        ],
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-05",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_retries_are_bounded_and_model_retry_is_safe",
+      "claim": "Retries stop at max_attempts (no ticket, error to the model); when the model later retries the same call, exactly one ticket results.",
+      "outcome": "passed",
+      "duration_s": 0.053,
+      "evidence": {
+        "posts_sent": 4,
+        "first_call_feedback": "create_ticket: service returned HTTP 503: service unavailable",
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-06",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_model_retry_after_ambiguous_failure_does_not_duplicate",
+      "claim": "When every attempt times out after the service committed, the tool reports failure; the model's retry then returns the already-committed ticket, not a duplicate.",
+      "outcome": "passed",
+      "duration_s": 0.914,
+      "evidence": {
+        "first_call_feedback": "create_ticket: service unreachable after 3 attempt(s) (ReadTimeout)",
+        "tickets_after_first_call_committed": true,
+        "tickets_on_server": 1,
+        "retry_replayed": true
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-07",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_different_arguments_are_not_deduplicated",
+      "claim": "Idempotency doesn't over-collapse: different titles or priorities create distinct tickets.",
+      "outcome": "passed",
+      "duration_s": 0.096,
+      "evidence": {
+        "tickets_on_server": 3,
+        "distinct_idempotency_keys": 3
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-08",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_idempotency_scope_is_per_run",
+      "claim": "Separate tool sets (separate runs) create separate tickets; reusing a run_scope (resuming a run) replays instead.",
+      "outcome": "passed",
+      "duration_s": 0.027,
+      "evidence": {
+        "tickets_after_two_independent_runs": 2,
+        "tickets_after_resumed_run": 3
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-09",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_reads_are_idempotent",
+      "claim": "Repeated get_ticket calls return identical results and never change service state.",
+      "outcome": "passed",
+      "duration_s": 0.095,
+      "evidence": {
+        "identical_results": true,
+        "state_unchanged": true,
+        "posts_sent": 0
+      },
+      "failure": null
+    },
+    {
+      "id": "IDEM-10",
+      "category": "idempotency",
+      "test": "tests/test_ticket_service_tool.py::test_service_contract_rejects_key_reuse_with_different_body",
+      "claim": "Contract check on the fake service itself (so the other checks are meaningful): the same key with a different body is a 409 and creates nothing.",
+      "outcome": "passed",
+      "duration_s": 0.014,
+      "evidence": {
+        "statuses": [
+          201,
+          201,
+          409,
+          400
+        ],
+        "replay_header": "true",
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-01",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_requests_are_signed_and_tampering_is_rejected",
+      "claim": "Every request the tool sends carries a valid HMAC; a request whose body was altered after signing is rejected and creates nothing.",
+      "outcome": "passed",
+      "duration_s": 0.052,
+      "evidence": {
+        "tool_requests": 2,
+        "all_tool_requests_signature_valid": true,
+        "tampered_request_status": 401,
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-02[create]",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_tampered_response_is_discarded[create]",
+      "claim": "A response altered in transit is caught by the signature check specifically (not just by a later field comparison); the model never sees the altered data, and its retry gets the genuine ticket.",
+      "outcome": "passed",
+      "duration_s": 0.048,
+      "evidence": {
+        "feedback": "create_ticket: integrity check failed: response signature missing or invalid; result discarded",
+        "tampered_value_seen_by_model": false,
+        "retry_ticket": {
+          "id": "T-1",
+          "title": "Tamper",
+          "priority": "low"
+        },
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-02[get]",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_tampered_response_is_discarded[get]",
+      "claim": "A response altered in transit is caught by the signature check specifically (not just by a later field comparison); the model never sees the altered data, and its retry gets the genuine ticket.",
+      "outcome": "passed",
+      "duration_s": 0.05,
+      "evidence": {
+        "feedback": "get_ticket: integrity check failed: response signature missing or invalid; result discarded",
+        "tampered_value_seen_by_model": false,
+        "retry_ticket": {
+          "id": "T-1",
+          "title": "Tamper",
+          "priority": "low"
+        },
+        "tickets_on_server": 1
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-03",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_unsigned_response_is_discarded",
+      "claim": "A response with no signature is rejected even though its content is otherwise fine.",
+      "outcome": "passed",
+      "duration_s": 0.002,
+      "evidence": {
+        "feedback": "get_ticket: integrity check failed: response signature missing or invalid; result discarded"
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-04[create]",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_validly_signed_but_wrong_ticket_is_discarded[create]",
+      "claim": "A correctly signed response describing a different ticket than requested is rejected (semantic check beyond the signature).",
+      "outcome": "passed",
+      "duration_s": 0.007,
+      "evidence": {
+        "feedback": "create_ticket: integrity check failed: the service returned a ticket that does not match the request; result discarded",
+        "foreign_data_seen_by_model": false
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-04[get]",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_validly_signed_but_wrong_ticket_is_discarded[get]",
+      "claim": "A correctly signed response describing a different ticket than requested is rejected (semantic check beyond the signature).",
+      "outcome": "passed",
+      "duration_s": 0.004,
+      "evidence": {
+        "feedback": "get_ticket: integrity check failed: the service returned a different ticket than requested; result discarded",
+        "foreign_data_seen_by_model": false
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-05",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_round_trip_fidelity",
+      "claim": "Titles with unicode, quotes, JSON-like text and the 200-char maximum are stored and returned byte-for-byte; invalid titles are rejected before sending.",
+      "outcome": "passed",
+      "duration_s": 0.182,
+      "evidence": {
+        "titles_tested": 5,
+        "stored_exactly": true,
+        "returned_exactly": true,
+        "rejected_locally": [
+          "create_ticket: title must be at most 200 characters",
+          "create_ticket: title must not contain control characters or newlines",
+          "create_ticket: priority must be one of low, medium, high; got 'urgent'"
+        ],
+        "posts_sent": 5
+      },
+      "failure": null
+    },
+    {
+      "id": "INT-06",
+      "category": "integrity",
+      "test": "tests/test_ticket_service_tool.py::test_end_to_end_state_reconciles_with_transcript",
+      "claim": "After a multi-step run with a duplicate and a dropped connection, the service's state matches the transcript exactly: same tickets, same fields, no extras.",
+      "outcome": "passed",
+      "duration_s": 0.193,
+      "evidence": {
+        "tickets_in_transcript": [
+          "T-1",
+          "T-2"
+        ],
+        "tickets_on_server": [
+          "T-1",
+          "T-2"
+        ],
+        "server_matches_transcript": true,
+        "secret_fragments_in_result": 0
+      },
+      "failure": null
+    }
+  ]
+}
