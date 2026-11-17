@@ -1,0 +1,75 @@
+{
+  "model": "qwen3-coder:30b",
+  "verdict": "PASS",
+  "checks": {
+    "run completed": true,
+    "model called create_ticket": true,
+    "model called get_ticket": true,
+    "dropped connection was exercised": true,
+    "exactly one ticket on the service": true,
+    "ticket has the requested title and priority": true,
+    "every request carried a valid signature": true,
+    "no secret in the Result": true
+  },
+  "service_tickets": {
+    "T-1": {
+      "id": "T-1",
+      "title": "Printer on floor 3 is jammed",
+      "priority": "high"
+    }
+  },
+  "service_requests": [
+    {
+      "method": "POST",
+      "path": "/v1/tickets",
+      "status": null,
+      "signature_valid": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/tickets",
+      "status": 201,
+      "signature_valid": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/tickets/T-1",
+      "status": 200,
+      "signature_valid": true
+    }
+  ],
+  "result": {
+    "status": "completed",
+    "final_answer": "The ticket has been created successfully with the id \"T-1\" and priority \"high\".",
+    "transcript": [
+      {
+        "tool_call": {
+          "name": "create_ticket",
+          "args": {
+            "title": "Printer on floor 3 is jammed",
+            "priority": "high"
+          }
+        },
+        "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Printer on floor 3 is jammed\", \"priority\": \"high\"}, \"replayed\": true}",
+        "ms": 44664,
+        "eval_count": 38
+      },
+      {
+        "tool_call": {
+          "name": "get_ticket",
+          "args": {
+            "ticket_id": "T-1"
+          }
+        },
+        "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Printer on floor 3 is jammed\", \"priority\": \"high\"}}",
+        "ms": 870,
+        "eval_count": 25
+      }
+    ],
+    "iterations": 2,
+    "tokens": 83,
+    "model": "qwen3-coder:30b",
+    "duration_ms": 46265
+  },
+  "error": null
+}

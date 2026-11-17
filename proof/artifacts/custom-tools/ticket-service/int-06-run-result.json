@@ -11,7 +11,7 @@
         }
       },
       "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Email outage\", \"priority\": \"high\"}, \"replayed\": true}",
-      "ms": 5,
+      "ms": 1,
       "eval_count": 1
     },
     {
@@ -23,7 +23,7 @@
         }
       },
       "tool_result": "{\"ticket\": {\"id\": \"T-2\", \"title\": \"New laptop\", \"priority\": \"low\"}, \"replayed\": false}",
-      "ms": 47,
+      "ms": 41,
       "eval_count": 1
     },
     {
@@ -35,7 +35,7 @@
         }
       },
       "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Email outage\", \"priority\": \"high\"}, \"replayed\": true}",
-      "ms": 45,
+      "ms": 41,
       "eval_count": 1
     },
     {
@@ -46,7 +46,7 @@
         }
       },
       "tool_result": "{\"ticket\": {\"id\": \"T-2\", \"title\": \"New laptop\", \"priority\": \"low\"}}",
-      "ms": 43,
+      "ms": 40,
       "eval_count": 1
     },
     {
@@ -57,12 +57,12 @@
         }
       },
       "tool_result": "{\"ticket\": {\"id\": \"T-1\", \"title\": \"Email outage\", \"priority\": \"high\"}}",
-      "ms": 47,
+      "ms": 41,
       "eval_count": 1
     }
   ],
   "iterations": 5,
   "tokens": 6,
   "model": "scripted-model",
-  "duration_ms": 190
+  "duration_ms": 166
 }

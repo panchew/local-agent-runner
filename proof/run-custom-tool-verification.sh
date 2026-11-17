@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+export PYTHONPATH="$(cd "$(dirname "$0")/.." && pwd)${PYTHONPATH:+:$PYTHONPATH}"
 # One-command verification of a custom tool that calls an external service
 # (examples/ticket_service/): security, idempotency, integrity.
 #
@@ -15,7 +16,7 @@
 # Usage: proof/run-custom-tool-verification.sh
 #   LIVE=1            also run the live-model proof (needs Ollama)
 #   OLLAMA_ENDPOINT   default http://localhost:11434
-#   PROOF_MODEL       default qwen2.5-coder:14b
+#   PROOF_MODEL       default qwen3-coder:30b
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,9 +36,9 @@ echo "== 2/3 mutation check =="
 
 echo
 if [[ "${LIVE:-0}" == "1" ]]; then
-  echo "== 3/3 live proof (${PROOF_MODEL:-qwen2.5-coder:14b}) =="
+  echo "== 3/3 live proof (${PROOF_MODEL:-qwen3-coder:30b}) =="
   "$PY" examples/ticket_service/live_proof.py \
-    --model "${PROOF_MODEL:-qwen2.5-coder:14b}" \
+    --model "${PROOF_MODEL:-qwen3-coder:30b}" \
     --endpoint "${OLLAMA_ENDPOINT:-http://localhost:11434}" \
     --out "$OUT" || status=1
 else

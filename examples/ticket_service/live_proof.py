@@ -5,7 +5,7 @@ script runs the same tools with a real Ollama model, over real HTTP, and
 forces a dropped connection after the first commit. It then checks the
 service's final state against the run:
 
-    python examples/ticket_service/live_proof.py --model qwen2.5-coder:14b --out DIR
+    python examples/ticket_service/live_proof.py --model qwen3-coder:30b --out DIR
 
 Writes DIR/live-proof.json (checks + the full Result). Exit 0 only if every check passes.
 """
@@ -34,7 +34,7 @@ TASK = (
 
 def main(argv: Optional[List[str]] = None, client: Any = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--model", default="qwen2.5-coder:14b")
+    parser.add_argument("--model", default="qwen3-coder:30b")
     parser.add_argument("--endpoint", default="http://localhost:11434")
     parser.add_argument("--max-iterations", type=int, default=8)
     parser.add_argument("--out", help="directory for live-proof.json")
